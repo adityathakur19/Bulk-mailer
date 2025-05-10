@@ -35,58 +35,79 @@ def generate_pdf(student_data, offer_date):
     # Define styles
     styles = getSampleStyleSheet()
     
-    # Create a custom style for the heading
-    styles.add(ParagraphStyle(
-        name='Heading1',
+    # Create custom styles
+    title_style = ParagraphStyle(
+        name='TitleStyle',
         parent=styles['Heading1'],
-        fontSize=16,
+        fontSize=14,
         alignment=1,  # 0=left, 1=center, 2=right
         spaceAfter=12
-    ))
+    )
+    
+    normal_style = ParagraphStyle(
+        name='NormalStyle',
+        parent=styles['Normal'],
+        fontSize=11,
+        leading=14
+    )
+    
+    bold_style = ParagraphStyle(
+        name='BoldStyle',
+        parent=styles['Normal'],
+        fontSize=11,
+        leading=14,
+        fontName='Helvetica-Bold'
+    )
     
     # Content for the PDF
     content = []
     
-    # University Name
-    university_name = "GLOBAL UNIVERSITY"
-    content.append(Paragraph(university_name, styles['Heading1']))
+    # Title
+    content.append(Paragraph("OFFER LETTER", title_style))
     content.append(Spacer(1, 0.25 * inch))
     
     # Date
-    content.append(Paragraph(f"Date: {offer_date}", styles['Normal']))
+    content.append(Paragraph(f"Date: {offer_date}", normal_style))
+    content.append(Spacer(1, 0.5 * inch))
+    
+    # Greeting
+    content.append(Paragraph(f"Dear {student_data['name']},", normal_style))
     content.append(Spacer(1, 0.25 * inch))
     
-    # Student Name
-    content.append(Paragraph(f"To: {student_data['name']}", styles['Normal']))
-    content.append(Paragraph(f"Nationality: {student_data['nationality']}", styles['Normal']))
-    content.append(Spacer(1, 0.25 * inch))
-    
-    # Subject
-    content.append(Paragraph("SUBJECT: OFFER LETTER", styles['Heading2']))
-    content.append(Spacer(1, 0.25 * inch))
-    
-    # Letter content
-    letter_content = f"""
-    Dear {student_data['name']},<br/><br/>
-    
-    We are pleased to offer you admission to our {student_data['program']} program at Global University.
-    Based on your academic records and qualifications, we believe you will be a valuable addition to our institution.<br/><br/>
-    
-    <b>Program Details:</b><br/>
-    Program: {student_data['program']}<br/>
-    Tuition Fee: ${student_data['fee']}<br/><br/>
-    
-    We look forward to your acceptance of this offer and to welcoming you to Global University.
-    Please let us know your decision by responding to this letter within 30 days of the offer date.<br/><br/>
-    
-    Sincerely,<br/><br/>
-    
-    Prof. Jane Smith<br/>
-    Dean of Admissions<br/>
-    Global University
+    # Main content
+    main_content = f"""
+    Congratulations! We are pleased to offer you admission to the {student_data['program']} program at [Your Institute Name].
+    <br/><br/>
+    This program has been designed to equip students with the necessary academic and practical skills to succeed in today's competitive world. Your admission is a recognition of your achievements and potential.
+    <br/><br/>
+    Please find below the details of your admission:
+    <br/><br/>
     """
+    content.append(Paragraph(main_content, normal_style))
     
-    content.append(Paragraph(letter_content, styles['Normal']))
+    # Student details
+    student_details = f"""
+    <b>Student Name:</b> {student_data['name']}<br/>
+    <b>Program:</b> {student_data['program']}<br/>
+    <b>Nationality:</b> {student_data['nationality']}<br/>
+    <b>Tuition Fee:</b> ${student_data['fee']} USD (for the full duration of the program)<br/>
+    """
+    content.append(Paragraph(student_details, normal_style))
+    content.append(Spacer(1, 0.25 * inch))
+    
+    # Closing
+    closing = """
+    We request you to confirm your acceptance of this offer by replying to this letter or contacting the admissions office at your earliest convenience.
+    <br/><br/>
+    We look forward to welcoming you to our campus and wish you all the best for your academic journey.
+    <br/><br/>
+    Warm regards,
+    <br/><br/><br/>
+    _______________________<br/>
+    Director of Admissions<br/>
+    [Your Institute Name]
+    """
+    content.append(Paragraph(closing, normal_style))
     
     # Build the PDF document
     doc.build(content)
@@ -112,9 +133,11 @@ def generate_all_pdfs(student_data_list, offer_date):
     
     for student_data in student_data_list:
         try:
+            # Generate each PDF separately to avoid style definition conflicts
             pdf_bytes = generate_pdf(student_data, offer_date)
             results.append((student_data, pdf_bytes))
         except Exception as e:
             logging.error(f"Error generating PDF for {student_data['name']}: {str(e)}")
+            # Continue processing other students even if one fails
     
     return results

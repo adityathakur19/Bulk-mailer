@@ -14,11 +14,20 @@ def determine_fee(program_name):
     """
     program_name = program_name.lower()
     
-    if any(keyword in program_name for keyword in ['bachelor', 'undergraduate', 'bsc', 'ba', 'beng']):
+    # Bachelor's degree keywords
+    bachelor_keywords = ['bachelor', 'undergraduate', 'bsc', 'ba', 'beng', 'b.tech', 'btech', 'bca', 'b.sc', 'b.a', 'b.com', 'bcom']
+    
+    # Master's degree keywords
+    master_keywords = ['master', 'msc', 'ma', 'meng', 'mba', 'm.tech', 'mtech', 'mca', 'm.sc', 'm.a', 'm.com', 'mcom', 'ms', 'post graduate']
+    
+    # PhD keywords
+    phd_keywords = ['phd', 'doctorate', 'doctoral', 'ph.d', 'doctor of philosophy']
+    
+    if any(keyword in program_name for keyword in bachelor_keywords):
         return 1000
-    elif any(keyword in program_name for keyword in ['master', 'msc', 'ma', 'meng', 'mba']):
+    elif any(keyword in program_name for keyword in master_keywords):
         return 1500
-    elif any(keyword in program_name for keyword in ['phd', 'doctorate', 'doctoral']):
+    elif any(keyword in program_name for keyword in phd_keywords):
         return 2000
     else:
         # Default to Bachelor's fee if program type is unclear
