@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Bulk Offer Letter Generator{% endblock %}
+
+{% block content %}
+<div class="card shadow-lg mb-4">
+    <div class="card-header bg-primary">
+        <h2 class="card-title mb-0">
+            <i class="fas fa-file-upload me-2"></i>Upload Student Data
+        </h2>
+    </div>
+    <div class="card-body">
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">
+                            <i class="fas fa-table me-2"></i>Excel/CSV File
+                        </label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".csv, .xlsx, .xls" required>
+                        <div class="form-text">
+                            Upload a file with columns: Student Name, Nationality, Program Name
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="date" class="form-label">
+                            <i class="fas fa-calendar-alt me-2"></i>Offer Letter Date
+                        </label>
+                        <input type="text" class="form-control" id="date" name="date" placeholder="Select Date" required>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="uploadBtn">
+                <i class="fas fa-upload me-2"></i>Upload and Process
+            </button>
+        </form>
+    </div>
+</div>
+
+<div id="resultsSection" class="card shadow-lg mb-4 d-none">
+    <div class="card-header bg-success">
+        <h2 class="card-title mb-0">
+            <i class="fas fa-check-circle me-2"></i>Processing Results
+        </h2>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-success" id="successMessage"></div>
+        
+        <h3 class="mt-4 mb-3">
+            <i class="fas fa-table me-2"></i>Data Preview
+        </h3>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Nationality</th>
+                        <th>Program</th>
+                        <th>Fee</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="previewTableBody">
+                    <!-- Data will be inserted here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-4">
+            <button type="button" class="btn btn-primary" id="generateAllBtn">
+                <i class="fas fa-file-archive me-2"></i>Download All as ZIP
+            </button>
+            <button type="button" class="btn btn-secondary" id="resetBtn">
+                <i class="fas fa-redo me-2"></i>Reset Form
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="loadingModal" class="modal fade" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h4 id="loadingMessage">Processing your file...</h4>
+                <p class="text-muted">This may take a moment depending on file size.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="errorModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Error
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="errorMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block additional_js %}
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+{% endblock %}

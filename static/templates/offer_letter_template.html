@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Offer Letter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .university-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .address {
+            font-size: 14px;
+        }
+        .date {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .student-info {
+            margin-bottom: 20px;
+        }
+        .subject {
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .signature {
+            margin-top: 50px;
+        }
+        .signature-name {
+            margin-top: 40px;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 50px;
+            font-size: 12px;
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="university-name">GLOBAL UNIVERSITY</div>
+            <div class="address">123 Education Avenue, Academic City, 12345</div>
+            <div class="address">Phone: (123) 456-7890 | Email: admissions@globaluniversity.edu</div>
+        </div>
+        
+        <div class="date">{{date}}</div>
+        
+        <div class="student-info">
+            <p>To: {{name}}</p>
+            <p>Nationality: {{nationality}}</p>
+        </div>
+        
+        <div class="subject">SUBJECT: OFFER LETTER</div>
+        
+        <div class="content">
+            <p>Dear {{name}},</p>
+            
+            <p>We are pleased to offer you admission to our {{program}} program at Global University. Based on your academic records and qualifications, we believe you will be a valuable addition to our institution.</p>
+            
+            <p><strong>Program Details:</strong><br>
+            Program: {{program}}<br>
+            Tuition Fee: ${{fee}}</p>
+            
+            <p>We look forward to your acceptance of this offer and to welcoming you to Global University. Please let us know your decision by responding to this letter within 30 days of the offer date.</p>
+            
+            <p>Sincerely,</p>
+        </div>
+        
+        <div class="signature">
+            <div class="signature-name">Prof. Jane Smith</div>
+            <div>Dean of Admissions</div>
+            <div>Global University</div>
+        </div>
+        
+        <div class="footer">
+            <p>This is an official offer letter from Global University. Please keep it for your records.</p>
+        </div>
+    </div>
+</body>
+</html>
