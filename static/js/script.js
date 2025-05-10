@@ -1,10 +1,25 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize flatpickr for date selection
+    // Initialize flatpickr for offer date selection
     flatpickr("#date", {
-        dateFormat: "F j, Y", // e.g., "January 1, 2023"
+        dateFormat: "d-m-Y", // e.g., "07-05-2025"
         altInput: true,
-        altFormat: "F j, Y",
+        altFormat: "d-m-Y",
         defaultDate: new Date()
+    });
+    
+    // Initialize flatpickr for start date selection (month/year only)
+    flatpickr("#start_date", {
+        dateFormat: "F Y", // e.g., "May 2025"
+        altInput: true,
+        altFormat: "F Y",
+        defaultDate: new Date(),
+        plugins: [
+            new monthSelectPlugin({
+                shorthand: true,
+                dateFormat: "F Y",
+                altFormat: "F Y"
+            })
+        ]
     });
 
     // Get DOM elements

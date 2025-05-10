@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Institute Offer Letter Generator{% endblock %}
+{% block title %}Rayat Bahra University Offer Letter Generator{% endblock %}
 
 {% block content %}
 <div class="card shadow-lg mb-4">
@@ -28,7 +28,31 @@
                         <label for="date" class="form-label">
                             <i class="fas fa-calendar-alt me-2"></i>Offer Letter Date
                         </label>
-                        <input type="text" class="form-control" id="date" name="date" placeholder="Select Date" required>
+                        <input type="text" class="form-control" id="date" name="date" placeholder="Select Date (DD-MM-YYYY)" required>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="ref_number" class="form-label">
+                            <i class="fas fa-hashtag me-2"></i>Starting Reference Number
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">RBU/DIA25/OL-</span>
+                            <input type="number" class="form-control" id="ref_number" name="ref_number" placeholder="e.g. 6598" min="1000" max="9999" required>
+                        </div>
+                        <div class="form-text">
+                            Enter a 4-digit number. Letters will auto-increment for each student.
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="start_date" class="form-label">
+                            <i class="fas fa-calendar-alt me-2"></i>Tentative Start Date
+                        </label>
+                        <input type="text" class="form-control" id="start_date" name="start_date" placeholder="Select Month/Year" required>
                     </div>
                 </div>
             </div>

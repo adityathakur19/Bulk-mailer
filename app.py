@@ -42,13 +42,34 @@ def upload_file():
     if not allowed_file(file.filename):
         return jsonify({'error': f'Invalid file type. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
     
-    # Get selected date
+    # Get form data
     offer_date = request.form.get('date')
     if not offer_date:
         return jsonify({'error': 'Please select a date for the offer letters'}), 400
     
+    # Get reference number starting point
+    ref_number_start = request.form.get('ref_number')
+    if not ref_number_start:
+        return jsonify({'error': 'Please enter a starting reference number'}), 400
+    
+    try:
+        ref_number_start = int(ref_number_start)
+    except ValueError:
+        return jsonify({'error': 'Reference number must be a 4-digit number'}), 400
+        
+    if ref_number_start < 1000 or ref_number_start > 9999:
+        return jsonify({'error': 'Reference number must be a 4-digit number'}), 400
+    
+    # Get tentative start date
+    start_date = request.form.get('start_date')
+    if not start_date:
+        return jsonify({'error': 'Please select a tentative start date'}), 400
+    
     try:
         # Process the uploaded file
+        if file.filename is None:
+            return jsonify({'error': 'Invalid filename'}), 400
+            
         filename = secure_filename(file.filename)
         temp_path = os.path.join(tempfile.gettempdir(), filename)
         file.save(temp_path)
@@ -59,6 +80,8 @@ def upload_file():
         # Store data in session
         session['student_data'] = student_data
         session['offer_date'] = offer_date
+        session['ref_number_start'] = ref_number_start
+        session['start_date'] = start_date
         
         # Clean up
         os.remove(temp_path)
@@ -78,20 +101,25 @@ def generate_pdf_route():
     # Get individual student data
     student_index = int(request.form.get('index', 0))
     
-    if 'student_data' not in session or 'offer_date' not in session:
+    if 'student_data' not in session or 'offer_date' not in session or 'ref_number_start' not in session or 'start_date' not in session:
         return jsonify({'error': 'No data available. Please upload a file first.'}), 400
     
     student_data = session['student_data']
     offer_date = session['offer_date']
+    ref_number_start = session['ref_number_start']
+    start_date = session['start_date']
     
     if student_index >= len(student_data):
         return jsonify({'error': 'Invalid student index'}), 400
     
     student = student_data[student_index]
     
+    # Generate reference number (increment by student index)
+    reference_number = f"RBU/DIA25/OL-{ref_number_start + student_index:04d}"
+    
     try:
         # Generate PDF for a single student
-        pdf_bytes = generate_pdf(student, offer_date)
+        pdf_bytes = generate_pdf(student, offer_date, reference_number, start_date)
         
         # Send the PDF file
         mem_file = BytesIO(pdf_bytes)
@@ -112,15 +140,17 @@ def generate_pdf_route():
 
 @app.route('/generate-all-pdfs', methods=['POST'])
 def generate_all_pdfs_route():
-    if 'student_data' not in session or 'offer_date' not in session:
+    if 'student_data' not in session or 'offer_date' not in session or 'ref_number_start' not in session or 'start_date' not in session:
         return jsonify({'error': 'No data available. Please upload a file first.'}), 400
     
     student_data = session['student_data']
     offer_date = session['offer_date']
+    ref_number_start = session['ref_number_start']
+    start_date = session['start_date']
     
     try:
         # Generate all PDFs
-        all_pdfs = generate_all_pdfs(student_data, offer_date)
+        all_pdfs = generate_all_pdfs(student_data, offer_date, ref_number_start, start_date)
         
         # Create a ZIP file
         mem_zip = BytesIO()
