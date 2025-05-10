@@ -107,10 +107,20 @@ document.addEventListener('DOMContentLoaded', function() {
             programCell.textContent = student.program;
             row.appendChild(programCell);
             
-            // Fee cell
-            const feeCell = document.createElement('td');
-            feeCell.textContent = `$${student.fee}`;
-            row.appendChild(feeCell);
+            // Duration cell
+            const durationCell = document.createElement('td');
+            durationCell.textContent = student.duration;
+            row.appendChild(durationCell);
+            
+            // Tuition Fee cell
+            const tuitionFeeCell = document.createElement('td');
+            tuitionFeeCell.textContent = `$${student.tuition_fee}`;
+            row.appendChild(tuitionFeeCell);
+            
+            // First Year Total cell
+            const totalFeeCell = document.createElement('td');
+            totalFeeCell.textContent = `$${student.first_year_total}`;
+            row.appendChild(totalFeeCell);
             
             // Actions cell
             const actionsCell = document.createElement('td');
