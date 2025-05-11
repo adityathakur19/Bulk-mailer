@@ -114,9 +114,9 @@ class RBUOfferLetterTemplate(SimpleDocTemplate):
         width, height = doc.pagesize
         
         # Add watermark
-        canvas.setFont('Helvetica-Bold', 100)  # Larger font
+        canvas.setFont('Helvetica-Bold', 70)  # Smaller font
         canvas.setFillColor(colors.lightgrey)  # Light grey color
-        canvas.setFillAlpha(0.3)  # Set transparency
+        canvas.setFillAlpha(0.2)  # Less opacity
         canvas.saveState()
         canvas.translate(width/2, height/2)  # Move to center
         canvas.rotate(45)  # Rotate 45 degrees
@@ -134,8 +134,7 @@ class RBUOfferLetterTemplate(SimpleDocTemplate):
                 height - 30*mm,  # Position at top
                 width=90*mm,  # Wider to maintain aspect ratio
                 height=20*mm,
-                preserveAspectRatio=True,
-                mask='auto'  # Auto-detect transparency
+                preserveAspectRatio=True
             )
         
         # Right logo (UniPortal) - positioned at top right with better spacing
@@ -147,8 +146,7 @@ class RBUOfferLetterTemplate(SimpleDocTemplate):
                 height - 25*mm,  # Slightly higher to align better
                 width=55*mm, 
                 height=15*mm,
-                preserveAspectRatio=True,
-                mask='auto'  # Auto-detect transparency
+                preserveAspectRatio=True
             )
         
         # Add a thin border line below the logo for separation

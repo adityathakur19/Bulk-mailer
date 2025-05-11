@@ -147,7 +147,7 @@ def process_uploaded_file(file_path):
             raise ValueError(f"Unsupported file format: {file_extension}")
         
         # Check for required columns
-        required_columns = ['Student Name', 'Nationality', 'Program Name']
+        required_columns = ['Student Name', 'Nationality', 'Program Name', 'Email']
         missing_columns = [col for col in required_columns if col not in df.columns]
         
         if missing_columns:
@@ -157,7 +157,8 @@ def process_uploaded_file(file_path):
         df = df.rename(columns={
             'Student Name': 'name',
             'Nationality': 'nationality',
-            'Program Name': 'program'
+            'Program Name': 'program',
+            'Email': 'email'
         })
         
         # Process each row and determine program details
@@ -176,6 +177,7 @@ def process_uploaded_file(file_path):
                 'name': row['name'],
                 'nationality': row['nationality'],
                 'program': row['program'],
+                'email': row['email'],
                 'program_type': program_details['program_type'],
                 'duration': program_details['duration'],
                 'tuition_fee': program_details['tuition_fee'],
