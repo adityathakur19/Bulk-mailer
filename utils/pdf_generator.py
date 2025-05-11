@@ -29,34 +29,57 @@ def create_fee_table(student_data):
     first_year_total = student_data['first_year_total']
     duration_years = int(student_data['duration'].split()[0])
     
-    # Create the data for the table
+    # Create the data for the table header
     data = [
-        ['Year', 'One Time Fee', 'Tuition Fee (USD)', 'ELP', 'Hostel Fee (USD)', 'Total Fee per year (USD)'],
-        ['1st Year', f"{one_time_fee}", f"{tuition_fee}", f"{elp_fee}", f"{hostel_fee}", f"{first_year_total}"],
+        ['Year', 'One Time Fee', 'Tuition Fee (USD)', 'ELP', 'Hostel Fee (USD)', 'Total Fee per year (USD)']
     ]
     
-    # Add subsequent years
-    for year in range(2, duration_years + 1):
-        year_name = {2: '2nd', 3: '3rd'}.get(year, f"{year}th")
+    # First year with all fees
+    data.append(['1st Year', f"{one_time_fee}", f"{tuition_fee}", f"{elp_fee}", f"{hostel_fee}", f"{first_year_total}"])
+    
+    # Always add 2nd, 3rd, and 4th year rows (if applicable)
+    year_suffixes = {2: '2nd', 3: '3rd', 4: '4th'}
+    
+    # Add years 2 through 4 (or up to duration if less)
+    for year in range(2, min(5, duration_years + 1)):
+        year_name = year_suffixes.get(year, f"{year}th")
         data.append([f"{year_name} Year", "NIL", f"{tuition_fee}", "", "", f"{tuition_fee}"])
     
-    # Add total
+    # Add remaining years if program is longer than 4 years
+    for year in range(5, duration_years + 1):
+        year_name = f"{year}th"
+        data.append([f"{year_name} Year", "NIL", f"{tuition_fee}", "", "", f"{tuition_fee}"])
+    
+    # Calculate total program fee
     program_total = first_year_total + (tuition_fee * (duration_years - 1))
     
-    # Create the table
-    table = Table(data, colWidths=[60, 80, 100, 40, 100, 130])
+    # Add a total row
+    data.append(["Total Fee", "", "", "", "", f"{program_total}"])
     
-    # Style the table
+    # Create the table with appropriate column widths
+    table = Table(data, colWidths=[60, 80, 100, 40, 100, 130], repeatRows=1)
+    
+    # Define table styles for better alignment and formatting
     style = TableStyle([
+        # Header row styling
         ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        
+        # All cells alignment
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Left align first column (Year)
+        ('ALIGN', (1, 1), (-1, -2), 'CENTER'),  # Center align all other cells
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Vertical alignment
+        
+        # Grid lines
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('SPAN', (0, -1), (-1, -1)),
+        
+        # Total row styling
+        ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
         ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-        ('ALIGN', (0, -1), (-1, -1), 'RIGHT'),
+        ('ALIGN', (0, -1), (0, -1), 'LEFT'),  # Left align "Total Fee" text
+        ('ALIGN', (-1, -1), (-1, -1), 'CENTER'),  # Center align total amount
     ])
     
     table.setStyle(style)
@@ -91,8 +114,9 @@ class RBUOfferLetterTemplate(SimpleDocTemplate):
         width, height = doc.pagesize
         
         # Add watermark
-        canvas.setFont('Helvetica-Bold', 70)
+        canvas.setFont('Helvetica-Bold', 100)  # Larger font
         canvas.setFillColor(colors.lightgrey)  # Light grey color
+        canvas.setFillAlpha(0.3)  # Set transparency
         canvas.saveState()
         canvas.translate(width/2, height/2)  # Move to center
         canvas.rotate(45)  # Rotate 45 degrees
@@ -100,29 +124,37 @@ class RBUOfferLetterTemplate(SimpleDocTemplate):
         canvas.restoreState()
         
         # Add logos
-        # Left logo (RBU)
+        # Left logo (RBU) - positioned at top left
         left_logo_path = os.path.join(os.getcwd(), 'static/images/rbu_logo.png')
         if os.path.exists(left_logo_path):
+            # Calculate better dimensions to preserve aspect ratio
             canvas.drawImage(
                 left_logo_path, 
-                20*mm, 
+                15*mm,  # Left margin
                 height - 30*mm,  # Position at top
-                width=60*mm, 
+                width=90*mm,  # Wider to maintain aspect ratio
                 height=20*mm,
-                preserveAspectRatio=True
+                preserveAspectRatio=True,
+                mask='auto'  # Auto-detect transparency
             )
         
-        # Right logo (UniPortal)
+        # Right logo (UniPortal) - positioned at top right with better spacing
         right_logo_path = os.path.join(os.getcwd(), 'static/images/uniportal_logo.png')
         if os.path.exists(right_logo_path):
             canvas.drawImage(
                 right_logo_path, 
-                width - 80*mm,  # Position at top right
-                height - 30*mm,
-                width=60*mm, 
-                height=20*mm,
-                preserveAspectRatio=True
+                width - 75*mm,  # Position at top right
+                height - 25*mm,  # Slightly higher to align better
+                width=55*mm, 
+                height=15*mm,
+                preserveAspectRatio=True,
+                mask='auto'  # Auto-detect transparency
             )
+        
+        # Add a thin border line below the logo for separation
+        canvas.setStrokeColor(colors.grey)
+        canvas.setLineWidth(0.5)
+        canvas.line(15*mm, height - 35*mm, width - 15*mm, height - 35*mm)
         
         canvas.restoreState()
 
@@ -145,10 +177,10 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
     doc = RBUOfferLetterTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=20*mm,
-        leftMargin=20*mm,
-        topMargin=40*mm,  # Increased top margin for logos
-        bottomMargin=20*mm
+        rightMargin=25*mm,   # Increased for better alignment
+        leftMargin=25*mm,    # Increased for better alignment
+        topMargin=45*mm,     # Increased for logos and separation line
+        bottomMargin=25*mm   # Increased for better balance
     )
     
     # Define styles
