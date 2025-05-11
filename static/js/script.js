@@ -28,10 +28,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const previewTableBody = document.getElementById('previewTableBody');
     const successMessage = document.getElementById('successMessage');
     const generateAllBtn = document.getElementById('generateAllBtn');
+    const sendAllEmailsBtn = document.getElementById('sendAllEmailsBtn');
     const resetBtn = document.getElementById('resetBtn');
     const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
     const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+    const emailResultsModal = new bootstrap.Modal(document.getElementById('emailResultsModal'));
     const errorMessageEl = document.getElementById('errorMessage');
+    const successModalMessageEl = document.getElementById('successModalMessage');
+    const emailResultsSummaryEl = document.getElementById('emailResultsSummary');
+    const emailResultsTableBodyEl = document.getElementById('emailResultsTableBody');
     const loadingMessageEl = document.getElementById('loadingMessage');
 
     // Store student data
@@ -304,6 +310,78 @@ document.addEventListener('DOMContentLoaded', function() {
         window.scrollTo({
             top: 0,
             behavior: 'smooth'
+        });
+    });
+    
+    // Handle "Send All Emails" button click
+    sendAllEmailsBtn.addEventListener('click', function() {
+        // Show loading modal
+        loadingMessageEl.textContent = 'Sending emails to all students...';
+        loadingModal.show();
+        
+        fetch('/send-all-emails', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingModal.hide();
+            
+            if (data.error) {
+                errorMessageEl.textContent = data.error;
+                errorModal.show();
+            } else {
+                // Show email results
+                emailResultsSummaryEl.textContent = data.message;
+                
+                // Clear previous results
+                emailResultsTableBodyEl.innerHTML = '';
+                
+                // Populate email results table
+                if (data.details && data.details.length > 0) {
+                    data.details.forEach(result => {
+                        const row = document.createElement('tr');
+                        
+                        // Name cell
+                        const nameCell = document.createElement('td');
+                        nameCell.textContent = result.name;
+                        row.appendChild(nameCell);
+                        
+                        // Email cell
+                        const emailCell = document.createElement('td');
+                        emailCell.textContent = result.email;
+                        row.appendChild(emailCell);
+                        
+                        // Status cell
+                        const statusCell = document.createElement('td');
+                        if (result.status === 'sent') {
+                            statusCell.innerHTML = '<span class="badge bg-success">Sent</span>';
+                        } else {
+                            statusCell.innerHTML = '<span class="badge bg-danger">Failed</span>';
+                        }
+                        row.appendChild(statusCell);
+                        
+                        emailResultsTableBodyEl.appendChild(row);
+                    });
+                }
+                
+                // Show email results modal
+                emailResultsModal.show();
+                
+                // Update UI to show emails were sent
+                const emailBtns = document.querySelectorAll('.btn-outline-success');
+                emailBtns.forEach(btn => {
+                    btn.classList.remove('btn-outline-success');
+                    btn.classList.add('btn-success');
+                    btn.innerHTML = '<i class="fas fa-check me-1"></i> Sent';
+                    btn.disabled = true;
+                });
+            }
+        })
+        .catch(error => {
+            loadingModal.hide();
+            errorMessageEl.textContent = 'An unexpected error occurred. Please try again.';
+            errorModal.show();
+            console.error('Error:', error);
         });
     });
 });

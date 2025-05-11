@@ -7,7 +7,7 @@ from flask import Flask, render_template, request, jsonify, send_file, flash, se
 from werkzeug.utils import secure_filename
 from utils.file_processor import process_uploaded_file
 from utils.pdf_generator import generate_pdf, generate_all_pdfs
-from utils.email_sender import send_offer_letter_email, send_bulk_emails
+from utils.gmail_sender import send_offer_letter_email, send_bulk_emails
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)

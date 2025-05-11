@@ -492,6 +492,7 @@ dependencies = [
     { name = "pandas" },
     { name = "psycopg2-binary" },
     { name = "reportlab" },
+    { name = "secure-smtplib" },
     { name = "sendgrid" },
     { name = "werkzeug" },
     { name = "xlrd" },
@@ -507,6 +508,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "reportlab", specifier = ">=4.4.0" },
+    { name = "secure-smtplib", specifier = ">=0.1.1" },
     { name = "sendgrid", specifier = ">=6.12.0" },
     { name = "werkzeug", specifier = ">=3.1.3" },
     { name = "xlrd", specifier = ">=2.0.1" },
@@ -523,6 +525,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/88/69/291a56d8bb177017e6e5421c34baa51b2e9017434c0ca1822e5007e45a26/reportlab-4.4.0.tar.gz", hash = "sha256:a64d85513910e246c21dc97ccc3c9054a1d44370bf8fc1fab80af937814354d5", size = 3597413 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/52/15/4702e132ae36beb8daf3e20a92f166451148c4a89650cc9d3f19b3c66714/reportlab-4.4.0-py3-none-any.whl", hash = "sha256:0a993f1d4a765fcbdf4e26adc96b3351004ebf4d27583340595ba7edafebec32", size = 1953103 },
+]
+
+[[package]]
+name = "secure-smtplib"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1f/86/30df3f748dd43c064bed3059f116a32adc71622087b1d4eb379e2fb663f7/secure-smtplib-0.1.1.tar.gz", hash = "sha256:3d4903f6612626ccd9b77ef05313cb3c3952a59a4d756cda2377b272fabad8b9", size = 5912 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1c/bd/3c602fbfa16cad120e93e4b0286d89aad0ec2ce163cdf5410a6ce4cadba5/secure_smtplib-0.1.1-py2.py3-none-any.whl", hash = "sha256:645ea0a341f306fa3307c8fe1169765c417ff363db9946fa69f3669a9b718069", size = 3384 },
 ]
 
 [[package]]
