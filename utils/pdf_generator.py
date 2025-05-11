@@ -1,13 +1,15 @@
 import os
 import io
 import logging
-from flask import render_template
+import math
+from flask import render_template, url_for
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, mm
+from reportlab.lib.utils import ImageReader
 
 def create_fee_table(student_data):
     """
@@ -61,6 +63,69 @@ def create_fee_table(student_data):
     
     return table, program_total
 
+class RBUOfferLetterTemplate(SimpleDocTemplate):
+    """Custom document template with watermark and logo support"""
+    
+    def __init__(self, filename, **kwargs):
+        SimpleDocTemplate.__init__(self, filename, **kwargs)
+        self.watermark_text = "NOT FOR VISA"
+    
+    def build(self, flowables, onFirstPage=None, onLaterPages=None, canvasmaker=canvas.Canvas):
+        """Override build method to add watermark and logos"""
+        # Create a canvas for each page
+        self._calc()  # Calculate document layout
+        
+        # Store the canvas and template functions
+        self._onFirstPage = self._watermark_and_logos
+        self._onLaterPages = self._watermark_and_logos
+        
+        # Call the parent's build method
+        SimpleDocTemplate.build(self, flowables, onFirstPage=self._onFirstPage, 
+                                onLaterPages=self._onLaterPages, canvasmaker=canvasmaker)
+    
+    def _watermark_and_logos(self, canvas, doc):
+        """Add watermark and logos to the page"""
+        canvas.saveState()
+        
+        # Get page width and height
+        width, height = doc.pagesize
+        
+        # Add watermark
+        canvas.setFont('Helvetica-Bold', 70)
+        canvas.setFillColor(colors.lightgrey)  # Light grey color
+        canvas.saveState()
+        canvas.translate(width/2, height/2)  # Move to center
+        canvas.rotate(45)  # Rotate 45 degrees
+        canvas.drawCentredString(0, 0, self.watermark_text)  # Draw watermark
+        canvas.restoreState()
+        
+        # Add logos
+        # Left logo (RBU)
+        left_logo_path = os.path.join(os.getcwd(), 'static/images/rbu_logo.png')
+        if os.path.exists(left_logo_path):
+            canvas.drawImage(
+                left_logo_path, 
+                20*mm, 
+                height - 30*mm,  # Position at top
+                width=60*mm, 
+                height=20*mm,
+                preserveAspectRatio=True
+            )
+        
+        # Right logo (UniPortal)
+        right_logo_path = os.path.join(os.getcwd(), 'static/images/uniportal_logo.png')
+        if os.path.exists(right_logo_path):
+            canvas.drawImage(
+                right_logo_path, 
+                width - 80*mm,  # Position at top right
+                height - 30*mm,
+                width=60*mm, 
+                height=20*mm,
+                preserveAspectRatio=True
+            )
+        
+        canvas.restoreState()
+
 def generate_pdf(student_data, offer_date, reference_number, start_date):
     """
     Generate a PDF offer letter for a student based on Rayat Bahra University template.
@@ -76,13 +141,13 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
     """
     buffer = io.BytesIO()
     
-    # Create the PDF document
-    doc = SimpleDocTemplate(
+    # Create the PDF document with custom template
+    doc = RBUOfferLetterTemplate(
         buffer,
         pagesize=A4,
         rightMargin=20*mm,
         leftMargin=20*mm,
-        topMargin=15*mm,
+        topMargin=40*mm,  # Increased top margin for logos
         bottomMargin=20*mm
     )
     
@@ -347,6 +412,10 @@ def generate_all_pdfs(student_data_list, offer_date, ref_number_start, start_dat
             # Generate PDF for this student
             pdf_bytes = generate_pdf(student_data, offer_date, reference_number, start_date)
             results.append((student_data, pdf_bytes))
+            
+            # Log success
+            logging.info(f"Successfully generated PDF for {student_data['name']} with reference {reference_number}")
+            
         except Exception as e:
             logging.error(f"Error generating PDF for {student_data['name']}: {str(e)}")
             # Continue processing other students even if one fails
