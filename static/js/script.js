@@ -97,6 +97,11 @@ document.addEventListener('DOMContentLoaded', function() {
             nameCell.textContent = student.name;
             row.appendChild(nameCell);
             
+            // Email cell
+            const emailCell = document.createElement('td');
+            emailCell.textContent = student.email;
+            row.appendChild(emailCell);
+            
             // Nationality cell
             const nationalityCell = document.createElement('td');
             nationalityCell.textContent = student.nationality;
@@ -122,13 +127,25 @@ document.addEventListener('DOMContentLoaded', function() {
             totalFeeCell.textContent = `$${student.first_year_total}`;
             row.appendChild(totalFeeCell);
             
-            // Actions cell
+            // Actions cell with both download and email buttons
             const actionsCell = document.createElement('td');
+            
+            // Download button
             const downloadBtn = document.createElement('button');
-            downloadBtn.className = 'btn btn-sm btn-outline-primary';
+            downloadBtn.className = 'btn btn-sm btn-outline-primary me-1';
             downloadBtn.innerHTML = '<i class="fas fa-download me-1"></i> Download';
             downloadBtn.addEventListener('click', () => generatePDF(index));
             actionsCell.appendChild(downloadBtn);
+            
+            // Email button (if email exists)
+            if (student.email) {
+                const emailBtn = document.createElement('button');
+                emailBtn.className = 'btn btn-sm btn-outline-success';
+                emailBtn.innerHTML = '<i class="fas fa-envelope me-1"></i> Email';
+                emailBtn.addEventListener('click', () => sendEmail(index));
+                actionsCell.appendChild(emailBtn);
+            }
+            
             row.appendChild(actionsCell);
             
             previewTableBody.appendChild(row);
@@ -178,6 +195,51 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             loadingModal.hide();
             errorMessageEl.textContent = error.message;
+            errorModal.show();
+            console.error('Error:', error);
+        });
+    }
+    
+    // Function to send an email with the offer letter
+    function sendEmail(index) {
+        // Show loading modal
+        loadingMessageEl.textContent = 'Sending email...';
+        loadingModal.show();
+        
+        const formData = new FormData();
+        formData.append('index', index);
+        
+        fetch('/send-email', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingModal.hide();
+            
+            if (data.error) {
+                errorMessageEl.textContent = data.error;
+                errorModal.show();
+            } else {
+                // Create and show success message
+                const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                document.getElementById('successModalMessage').textContent = data.message;
+                successModal.show();
+                
+                // Update the button to show it was sent
+                const row = previewTableBody.children[index];
+                const emailBtn = row.querySelector('.btn-outline-success');
+                if (emailBtn) {
+                    emailBtn.classList.remove('btn-outline-success');
+                    emailBtn.classList.add('btn-success');
+                    emailBtn.innerHTML = '<i class="fas fa-check me-1"></i> Sent';
+                    emailBtn.disabled = true;
+                }
+            }
+        })
+        .catch(error => {
+            loadingModal.hide();
+            errorMessageEl.textContent = 'An unexpected error occurred. Please try again.';
             errorModal.show();
             console.error('Error:', error);
         });

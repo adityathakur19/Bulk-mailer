@@ -7,6 +7,7 @@ from flask import Flask, render_template, request, jsonify, send_file, flash, se
 from werkzeug.utils import secure_filename
 from utils.file_processor import process_uploaded_file
 from utils.pdf_generator import generate_pdf, generate_all_pdfs
+from utils.email_sender import send_offer_letter_email, send_bulk_emails
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -138,6 +139,57 @@ def generate_pdf_route():
         logging.error(f"Error generating PDF: {str(e)}")
         return jsonify({'error': f'Error generating PDF: {str(e)}'}), 500
 
+@app.route('/send-email', methods=['POST'])
+def send_email_route():
+    # Get individual student data
+    student_index = int(request.form.get('index', 0))
+    
+    if 'student_data' not in session or 'offer_date' not in session or 'ref_number_start' not in session or 'start_date' not in session:
+        return jsonify({'error': 'No data available. Please upload a file first.'}), 400
+    
+    student_data = session['student_data']
+    offer_date = session['offer_date']
+    ref_number_start = session['ref_number_start']
+    start_date = session['start_date']
+    
+    if student_index >= len(student_data):
+        return jsonify({'error': 'Invalid student index'}), 400
+    
+    student = student_data[student_index]
+    
+    # Check if email is available
+    if not student.get('email'):
+        return jsonify({'error': 'No email address available for this student'}), 400
+    
+    # Generate reference number (increment by student index)
+    reference_number = f"RBU/DIA25/OL-{ref_number_start + student_index:04d}"
+    
+    try:
+        # Generate PDF for a single student
+        pdf_bytes = generate_pdf(student, offer_date, reference_number, start_date)
+        
+        # Send email with PDF attachment
+        email_sent = send_offer_letter_email(
+            student['email'],
+            student['name'],
+            pdf_bytes,
+            reference_number
+        )
+        
+        if email_sent:
+            return jsonify({
+                'success': True,
+                'message': f"Offer letter successfully sent to {student['email']}"
+            })
+        else:
+            return jsonify({
+                'error': 'Failed to send email. Please check your email settings.'
+            }), 500
+    
+    except Exception as e:
+        logging.error(f"Error sending email: {str(e)}")
+        return jsonify({'error': f'Error sending email: {str(e)}'}), 500
+
 @app.route('/generate-all-pdfs', methods=['POST'])
 def generate_all_pdfs_route():
     if 'student_data' not in session or 'offer_date' not in session or 'ref_number_start' not in session or 'start_date' not in session:
@@ -171,6 +223,48 @@ def generate_all_pdfs_route():
     except Exception as e:
         logging.error(f"Error generating PDFs: {str(e)}")
         return jsonify({'error': f'Error generating PDFs: {str(e)}'}), 500
+
+@app.route('/send-all-emails', methods=['POST'])
+def send_all_emails_route():
+    if 'student_data' not in session or 'offer_date' not in session or 'ref_number_start' not in session or 'start_date' not in session:
+        return jsonify({'error': 'No data available. Please upload a file first.'}), 400
+    
+    student_data = session['student_data']
+    offer_date = session['offer_date']
+    ref_number_start = session['ref_number_start']
+    start_date = session['start_date']
+    
+    # Check if all students have email addresses
+    missing_emails = [student['name'] for student in student_data if not student.get('email')]
+    if missing_emails:
+        return jsonify({
+            'error': f"The following students are missing email addresses: {', '.join(missing_emails)}"
+        }), 400
+    
+    try:
+        # Generate all PDFs
+        all_pdfs = generate_all_pdfs(student_data, offer_date, ref_number_start, start_date)
+        
+        # Create reference numbers
+        reference_numbers = [
+            f"RBU/DIA25/OL-{ref_number_start + i:04d}" for i in range(len(student_data))
+        ]
+        
+        # Extract PDF bytes from the tuple list
+        pdf_files = [pdf_bytes for _, pdf_bytes in all_pdfs]
+        
+        # Send emails to all students
+        results = send_bulk_emails(student_data, pdf_files, reference_numbers)
+        
+        return jsonify({
+            'success': True,
+            'message': f"Completed: {results['success']} emails sent, {results['failed']} failed",
+            'details': results['details']
+        })
+    
+    except Exception as e:
+        logging.error(f"Error sending emails: {str(e)}")
+        return jsonify({'error': f'Error sending emails: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
