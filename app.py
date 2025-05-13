@@ -23,9 +23,10 @@ app = Flask(__name__)
 app.secret_key = os.environ["SESSION_SECRET"]
 
 # MongoDB connection
-client = MongoClient("mongodb://localhost:27017/")
+# MongoDB Atlas connection
+client = MongoClient("mongodb+srv://testingaditya5:testing321@cluster0.vwas0.mongodb.net/?retryWrites=true&w=majority&tls=true")
 db = client["RBU"]
-collection = db["offer_letter_data"]
+collection = db["offer_letter"]
 
 # Configure file upload settings
 ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
