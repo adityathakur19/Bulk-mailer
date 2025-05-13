@@ -42,39 +42,85 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Store student data
     let studentData = [];
+    let currentDataId = null; // Store the current data_id
     const rowsPerPage = 10;
-let currentPage = 1;
+    let currentPage = 1;
 
-function renderTable() {
-    const start = (currentPage - 1) * rowsPerPage;
-    const pageItems = studentData.slice(start, start + rowsPerPage);
-    populatePreviewTable(pageItems);
-    renderPagination();
-  }
-
-
-// create pagination buttons
-function renderPagination() {
-    const pageCount = Math.ceil(studentData.length / rowsPerPage);
-    const container = document.getElementById('paginationControls');
-    container.innerHTML = '';
-  
-    for (let p = 1; p <= pageCount; p++) {
-      const li = document.createElement('li');
-      li.className = `page-item ${p === currentPage ? 'active' : ''}`;
-      const a = document.createElement('a');
-      a.className = 'page-link';
-      a.href = '#';
-      a.textContent = p;
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        currentPage = p;
-        renderTable();
-      });
-      li.appendChild(a);
-      container.appendChild(li);
+    function renderTable() {
+        const start = (currentPage - 1) * rowsPerPage;
+        const pageItems = studentData.slice(start, start + rowsPerPage);
+        populatePreviewTable(pageItems);
+        renderPagination();
     }
-  }
+
+    // create pagination buttons
+    function renderPagination() {
+        const pageCount = Math.ceil(studentData.length / rowsPerPage);
+        const container = document.getElementById('paginationControls');
+        container.innerHTML = '';
+        
+        // Add "Previous" button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        const prevA = document.createElement('a');
+        prevA.className = 'page-link';
+        prevA.href = '#';
+        prevA.textContent = 'Previous';
+        prevA.setAttribute('aria-label', 'Previous');
+        prevA.addEventListener('click', e => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable();
+            }
+        });
+        prevLi.appendChild(prevA);
+        container.appendChild(prevLi);
+        
+        // Calculate range of pages to show
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(pageCount, startPage + 4);
+        
+        // Adjust startPage if we're at the end
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        // Create page number buttons
+        for (let p = startPage; p <= endPage; p++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${p === currentPage ? 'active' : ''}`;
+            const a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = '#';
+            a.textContent = p;
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                currentPage = p;
+                renderTable();
+            });
+            li.appendChild(a);
+            container.appendChild(li);
+        }
+        
+        // Add "Next" button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === pageCount ? 'disabled' : ''}`;
+        const nextA = document.createElement('a');
+        nextA.className = 'page-link';
+        nextA.href = '#';
+        nextA.textContent = 'Next';
+        nextA.setAttribute('aria-label', 'Next');
+        nextA.addEventListener('click', e => {
+            e.preventDefault();
+            if (currentPage < pageCount) {
+                currentPage++;
+                renderTable();
+            }
+        });
+        nextLi.appendChild(nextA);
+        container.appendChild(nextLi);
+    }
 
     // Handle form submission
     uploadForm.addEventListener('submit', function(e) {
@@ -94,16 +140,21 @@ function renderPagination() {
         .then(response => response.json())
         .then(data => {
             loadingModal.hide();
-            if (data.error) { /* … */ }
-            else {
-              studentData = data.preview;   // now contains all records
-              currentPage = 1;              // reset to first page
-              document.getElementById('successMessage').textContent = data.message;
-              renderTable();                // initial render
-              resultsSection.classList.remove('d-none');
-              resultsSection.scrollIntoView({ behavior: 'smooth' });
+            if (data.error) {
+                errorMessageEl.textContent = data.error;
+                errorModal.show();
+            } else {
+                // Store the data_id for future requests
+                currentDataId = data.data_id;
+                
+                studentData = data.preview;   // now contains all records
+                currentPage = 1;              // reset to first page
+                document.getElementById('successMessage').textContent = data.message;
+                renderTable();                // initial render
+                resultsSection.classList.remove('d-none');
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
             }
-          })
+        })
         .catch(error => {
             loadingModal.hide();
             errorMessageEl.textContent = 'An unexpected error occurred. Please try again.';
@@ -117,6 +168,9 @@ function renderPagination() {
         previewTableBody.innerHTML = '';
         dataArray.forEach((student, index) => {
             const row = document.createElement('tr');
+            
+            // Calculate the actual global index based on current page
+            const globalIndex = (currentPage - 1) * rowsPerPage + index;
             
             // Name cell
             const nameCell = document.createElement('td');
@@ -155,9 +209,6 @@ function renderPagination() {
             
             // Actions cell with both download and email buttons
             const actionsCell = document.createElement('td');
-
-            const globalIndex = (currentPage - 1) * rowsPerPage + index;
-
             
             // Download button
             const downloadBtn = document.createElement('button');
@@ -171,7 +222,7 @@ function renderPagination() {
                 const emailBtn = document.createElement('button');
                 emailBtn.className = 'btn btn-sm btn-outline-success';
                 emailBtn.innerHTML = '<i class="fas fa-envelope me-1"></i> Email';
-                emailBtn.addEventListener('click',   () => sendEmail(globalIndex));
+                emailBtn.addEventListener('click', () => sendEmail(globalIndex));
                 actionsCell.appendChild(emailBtn);
             }
             
@@ -187,8 +238,17 @@ function renderPagination() {
         loadingMessageEl.textContent = 'Generating PDF...';
         loadingModal.show();
         
+        // Check if we have a data_id
+        if (!currentDataId) {
+            loadingModal.hide();
+            errorMessageEl.textContent = 'No data ID available. Please upload a file first.';
+            errorModal.show();
+            return;
+        }
+        
         const formData = new FormData();
         formData.append('index', index);
+        formData.append('data_id', currentDataId);  // Add the data_id
         
         fetch('/generate-pdf', {
             method: 'POST',
@@ -235,8 +295,17 @@ function renderPagination() {
         loadingMessageEl.textContent = 'Sending email...';
         loadingModal.show();
         
+        // Check if we have a data_id
+        if (!currentDataId) {
+            loadingModal.hide();
+            errorMessageEl.textContent = 'No data ID available. Please upload a file first.';
+            errorModal.show();
+            return;
+        }
+        
         const formData = new FormData();
         formData.append('index', index);
+        formData.append('data_id', currentDataId);  // Add the data_id
         
         fetch('/send-email', {
             method: 'POST',
@@ -251,12 +320,12 @@ function renderPagination() {
                 errorModal.show();
             } else {
                 // Create and show success message
-                const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                document.getElementById('successModalMessage').textContent = data.message;
+                successModalMessageEl.textContent = data.message;
                 successModal.show();
                 
                 // Update the button to show it was sent
-                const row = previewTableBody.children[index];
+                const pageIndex = index % rowsPerPage; // Get the index within the current page
+                const row = previewTableBody.children[pageIndex];
                 const emailBtn = row.querySelector('.btn-outline-success');
                 if (emailBtn) {
                     emailBtn.classList.remove('btn-outline-success');
@@ -280,8 +349,20 @@ function renderPagination() {
         loadingMessageEl.textContent = 'Generating all PDFs and creating ZIP file...';
         loadingModal.show();
         
+        // Check if we have a data_id
+        if (!currentDataId) {
+            loadingModal.hide();
+            errorMessageEl.textContent = 'No data ID available. Please upload a file first.';
+            errorModal.show();
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('data_id', currentDataId);  // Add the data_id
+        
         fetch('/generate-all-pdfs', {
-            method: 'POST'
+            method: 'POST',
+            body: formData
         })
         .then(response => {
             loadingModal.hide();
@@ -329,6 +410,10 @@ function renderPagination() {
         // Clear the preview table
         previewTableBody.innerHTML = '';
         
+        // Clear student data and data_id
+        studentData = [];
+        currentDataId = null;
+        
         // Scroll to top
         window.scrollTo({
             top: 0,
@@ -342,8 +427,20 @@ function renderPagination() {
         loadingMessageEl.textContent = 'Sending emails to all students...';
         loadingModal.show();
         
+        // Check if we have a data_id
+        if (!currentDataId) {
+            loadingModal.hide();
+            errorMessageEl.textContent = 'No data ID available. Please upload a file first.';
+            errorModal.show();
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('data_id', currentDataId);  // Add the data_id
+        
         fetch('/send-all-emails', {
-            method: 'POST'
+            method: 'POST',
+            body: formData
         })
         .then(response => response.json())
         .then(data => {
@@ -391,13 +488,7 @@ function renderPagination() {
                 emailResultsModal.show();
                 
                 // Update UI to show emails were sent
-                const emailBtns = document.querySelectorAll('.btn-outline-success');
-                emailBtns.forEach(btn => {
-                    btn.classList.remove('btn-outline-success');
-                    btn.classList.add('btn-success');
-                    btn.innerHTML = '<i class="fas fa-check me-1"></i> Sent';
-                    btn.disabled = true;
-                });
+                renderTable(); // Re-render the current page to show updated button states
             }
         })
         .catch(error => {

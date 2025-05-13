@@ -85,7 +85,7 @@ def determine_program_details(program_name):
     
     # Master's degree keywords
     master_keywords = [
-        'master', 'msc', 'ma', 'meng', 'mba', 'm.tech', 'mca',
+        'master', 'msc', 'ma', 'meng', 'mba', 'MBA', 'm.tech', 'mca',
         'm.sc', 'm.a', 'm.com', 'mcom', 'ms', 'post graduate', 'pg',
         'master in public health', 'masters in public health', 'hospitals administration',
         'mba marketing',
@@ -112,17 +112,28 @@ def determine_program_details(program_name):
     
     # Specialized overrides (checked early!)
     ai_ml_keywords = [
-        'btech_aiml', 'ai_ml', 'btech_ai_ml', 'btech artificial intelligence',
+        'btech_aiml', 'ai_ml', 'btech_ai_ml','btech ai ml', 'btech artificial intelligence',
         'btech machine learning', 'b.tech ai', 'b.tech ml', 'aiml', 'cyber security',
         'b.tech aiml', 'b.tech aiml / cyber security'
     ]
     
-    # Determine program type and set details
     if any(kw in program_name for kw in ai_ml_keywords):
         result.update({
             'tuition_fee': 1000,
             'duration': '04 YEARS',
             'program_type': 'Bachelor'
+        })
+    elif any(kw in program_name for kw in diploma_keywords):
+        result.update({
+            'tuition_fee': 700,
+            'duration': '03 YEAR',
+            'program_type': 'Diploma'
+        })
+    elif 'mba' in program_name:
+        result.update({
+            'tuition_fee': 800, 
+            'duration': '02 YEARS',
+            'program_type': 'Master'
         })
     # Pharmacy programs
     elif any(kw in program_name for kw in pharmacy_bachelor_keywords):
@@ -171,13 +182,6 @@ def determine_program_details(program_name):
             'tuition_fee': 1500,
             'duration': '03 YEARS',
             'program_type': 'PhD'
-        })
-    # Diploma programs
-    elif any(kw in program_name for kw in diploma_keywords):
-        result.update({
-            'tuition_fee': 1200,
-            'duration': '01 YEAR',
-            'program_type': 'Diploma'
         })
     # Default to bachelor's if nothing else matches
     else:

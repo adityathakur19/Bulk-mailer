@@ -34,8 +34,8 @@ def send_offer_letter_email(to_email, student_name, pdf_bytes, reference_number)
         msg['From'] = email.utils.formataddr(("Rayat Bahra University Admissions", SMTP_USERNAME))
         msg['To'] = to_email
         
-        bcc_email = "suhail.lucknow@gmail.com"
-        msg['Bcc'] = bcc_email
+        bcc_email = "adityathakur19200@gmail.com"
+      #  msg['Bcc'] = bcc_email
 
         
         # Create HTML content
@@ -43,7 +43,9 @@ def send_offer_letter_email(to_email, student_name, pdf_bytes, reference_number)
         <html>
             <body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333;">
                 <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-                   
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <img src="https://www.rayatbahrauniversity.edu.in/images/rbu-logo-1.png" alt="Rayat Bahra University" style="max-width: 200px;">
+                    </div>
                     <h2 style="color: #003366; text-align: center;">Congratulations, {student_name}!</h2>
                     <p style="font-size: 16px; line-height: 1.5;">We are pleased to inform you that your application to Rayat Bahra University has been successful.</p>
                     <p style="font-size: 16px; line-height: 1.5;">Attached to this email is your official offer letter containing all the details about your program, fees, and next steps.</p>
@@ -53,8 +55,8 @@ def send_offer_letter_email(to_email, student_name, pdf_bytes, reference_number)
                         <p style="font-size: 14px; color: #666;">Reference Number: {reference_number}</p>
                         <p style="font-size: 14px; color: #666;">Rayat Bahra University<br>
                         Admissions Office<br>
-                         Email: admissions@uniportal.co.in<br>
-                         Phone: +91-98759 30083</p>
+                        Email: admissions@uniportal.co.in<br>
+                        Phone: +91 98759 30083</p>
                     </div>
                 </div>
             </body>

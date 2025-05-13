@@ -4,13 +4,14 @@ import tempfile
 import zipfile
 from io import BytesIO
 import pandas as pd
-from flask import Flask, render_template, request, jsonify, send_file, flash, session
+from flask import Flask, render_template, request, jsonify, send_file, flash
 from werkzeug.utils import secure_filename
 from utils.file_processor import process_uploaded_file
 from utils.pdf_generator import generate_pdf, generate_all_pdfs
 from utils.gmail_sender import send_offer_letter_email, send_bulk_emails
+from pymongo import MongoClient
+from bson.objectid import ObjectId
 from dotenv import load_dotenv
-
 
 load_dotenv()
 
@@ -19,7 +20,12 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Initialize Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET")
+app.secret_key = os.environ.get("SESSION_SECRET", "temp_secret_key_for_development")
+
+# MongoDB connection
+client = MongoClient("mongodb://localhost:27017/")
+db = client["RBU"]
+collection = db["offer_letter_data"]
 
 # Configure file upload settings
 ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
@@ -85,20 +91,28 @@ def upload_file():
         df = df.where(pd.notnull(df), None)
         student_data = df.to_dict(orient='records')
         
-        # 3) store full, cleaned data in session
-        session['student_data']    = student_data
-        session['offer_date']      = offer_date
-        session['ref_number_start']= ref_number_start
-        session['start_date']      = start_date
+        # 3) Store in MongoDB instead of session
+        data_document = {
+            'student_data': student_data,
+            'offer_date': offer_date,
+            'ref_number_start': ref_number_start,
+            'start_date': start_date,
+            'created_at': pd.Timestamp.now().isoformat()
+        }
+        
+        # Insert into MongoDB and get the generated ID
+        result = collection.insert_one(data_document)
+        data_id = str(result.inserted_id)
         
         # cleanup temp file
         os.remove(temp_path)
         
-        # 4) return ALL records, not just a slice
+        # 4) return ALL records with MongoDB ID
         return jsonify({
             'success': True,
             'message': f'Successfully processed {len(student_data)} student records',
-            'preview': student_data       # now contains the full list
+            'preview': student_data,
+            'data_id': data_id  # Return MongoDB document ID for future reference
         })
     
     except Exception as e:
@@ -109,24 +123,40 @@ def upload_file():
 def generate_pdf_route():
     # Get individual student data
     student_index = int(request.form.get('index', 0))
+    data_id = request.form.get('data_id')
     
-    if 'student_data' not in session or 'offer_date' not in session or 'ref_number_start' not in session or 'start_date' not in session:
-        return jsonify({'error': 'No data available. Please upload a file first.'}), 400
-    
-    student_data = session['student_data']
-    offer_date = session['offer_date']
-    ref_number_start = session['ref_number_start']
-    start_date = session['start_date']
-    
-    if student_index >= len(student_data):
-        return jsonify({'error': 'Invalid student index'}), 400
-    
-    student = student_data[student_index]
-    
-    # Generate reference number (increment by student index)
-    reference_number = f"RBU/DIA25/OL-{ref_number_start + student_index:04d}"
+    if not data_id:
+        return jsonify({'error': 'No data ID provided. Please upload a file first.'}), 400
     
     try:
+        # Get data from MongoDB using the ID
+        data_document = collection.find_one({'_id': ObjectId(data_id)})
+        
+        if not data_document:
+            return jsonify({'error': 'Data not found in database. Please upload a file again.'}), 404
+        
+        student_data = data_document.get('student_data', [])
+        offer_date = data_document.get('offer_date')
+        ref_number_start = data_document.get('ref_number_start')
+        start_date = data_document.get('start_date')
+        
+        # Validate required fields
+        if not all([student_data, offer_date, ref_number_start, start_date]):
+            missing = []
+            for field, value in [('student_data', student_data), ('offer_date', offer_date), 
+                                ('ref_number_start', ref_number_start), ('start_date', start_date)]:
+                if not value:
+                    missing.append(field)
+            return jsonify({'error': f'Missing required data: {", ".join(missing)}'}), 400
+        
+        if student_index >= len(student_data):
+            return jsonify({'error': 'Invalid student index'}), 400
+        
+        student = student_data[student_index]
+        
+        # Generate reference number (increment by student index)
+        reference_number = f"RBU/DIA25/OL-{ref_number_start + student_index:04d}"
+        
         # Generate PDF for a single student
         pdf_bytes = generate_pdf(student, offer_date, reference_number, start_date)
         
@@ -147,32 +177,157 @@ def generate_pdf_route():
         logging.error(f"Error generating PDF: {str(e)}")
         return jsonify({'error': f'Error generating PDF: {str(e)}'}), 500
 
+@app.route('/data-status', methods=['GET'])
+def data_status():
+    """Check data status in MongoDB"""
+    data_id = request.args.get('data_id')
+    
+    if not data_id:
+        return jsonify({'error': 'No data ID provided'}), 400
+    
+    try:
+        data_document = collection.find_one({'_id': ObjectId(data_id)})
+        
+        if not data_document:
+            return jsonify({'exists': False})
+        
+        num_students = len(data_document.get('student_data', []))
+        
+        return jsonify({
+            'exists': True,
+            'num_students': num_students,
+            'offer_date': data_document.get('offer_date'),
+            'ref_number_start': data_document.get('ref_number_start'),
+            'start_date': data_document.get('start_date')
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/generate-all-pdfs', methods=['POST'])
+def generate_all_pdfs_route():
+    data_id = request.form.get('data_id')
+    
+    if not data_id:
+        return jsonify({'error': 'No data ID provided. Please upload a file first.'}), 400
+    
+    try:
+        # Get data from MongoDB
+        data_document = collection.find_one({'_id': ObjectId(data_id)})
+        
+        if not data_document:
+            return jsonify({'error': 'Data not found in database. Please upload a file again.'}), 404
+        
+        student_data = data_document.get('student_data', [])
+        offer_date = data_document.get('offer_date')
+        ref_number_start = data_document.get('ref_number_start')
+        start_date = data_document.get('start_date')
+        
+        # Validate the data
+        if not student_data or not isinstance(student_data, list):
+            logging.error(f"Invalid student_data format: {type(student_data)}")
+            return jsonify({'error': 'Invalid student data format. Please upload file again.'}), 400
+        
+        logging.info(f"Found {len(student_data)} students in database")
+        
+        # Create a temporary directory to store PDFs
+        temp_dir = tempfile.mkdtemp()
+        zip_filepath = os.path.join(temp_dir, 'offer_letters.zip')
+        
+        # Log info for debugging
+        logging.info(f"Processing {len(student_data)} student records into {zip_filepath}")
+        
+        # Process in batches to avoid memory issues
+        batch_size = 50
+        total_batches = (len(student_data) + batch_size - 1) // batch_size
+        
+        # Create the ZIP file on disk instead of in memory
+        with zipfile.ZipFile(zip_filepath, 'w') as zf:
+            for batch_num in range(total_batches):
+                start_idx = batch_num * batch_size
+                end_idx = min(start_idx + batch_size, len(student_data))
+                
+                logging.info(f"Processing batch {batch_num+1}/{total_batches} (students {start_idx}-{end_idx-1})")
+                
+                # Process each student in the current batch
+                for i in range(start_idx, end_idx):
+                    student = student_data[i]
+                    
+                    try:
+                        # Generate reference number
+                        reference_number = f"RBU/DIA25/OL-{ref_number_start + i:04d}"
+                        
+                        # Create safe versions of all fields
+                        safe_student = {}
+                        for key, value in student.items():
+                            safe_student[key] = "" if value is None else value
+                        
+                        # Generate PDF for this student
+                        pdf_bytes = generate_pdf(safe_student, offer_date, reference_number, start_date)
+                        
+                        if pdf_bytes:
+                            # Use a safe student name (fallback to index if name is missing)
+                            student_name = safe_student.get('name', f"student_{i}")
+                            if not student_name:
+                                student_name = f"student_{i}"
+                            
+                            # Create filename for this PDF
+                            filename = f"offer_letter_{student_name.replace(' ', '_')}.pdf"
+                            
+                            # Add to ZIP
+                            zf.writestr(filename, pdf_bytes)
+                            
+                    except Exception as e:
+                        # Log the error but continue with other students
+                        logging.error(f"Error processing student {i}: {str(e)}")
+                        continue
+        
+        # Send the file from disk
+        return send_file(
+            zip_filepath,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name='offer_letters.zip',
+            # Important: This will automatically remove the temp files after sending
+            max_age=0
+        )
+    
+    except Exception as e:
+        logging.error(f"Error generating PDFs: {str(e)}")
+        return jsonify({'error': f'Error generating PDFs: {str(e)}'}), 500
+
 @app.route('/send-email', methods=['POST'])
 def send_email_route():
     # Get individual student data
     student_index = int(request.form.get('index', 0))
+    data_id = request.form.get('data_id')
     
-    if 'student_data' not in session or 'offer_date' not in session or 'ref_number_start' not in session or 'start_date' not in session:
-        return jsonify({'error': 'No data available. Please upload a file first.'}), 400
-    
-    student_data = session['student_data']
-    offer_date = session['offer_date']
-    ref_number_start = session['ref_number_start']
-    start_date = session['start_date']
-    
-    if student_index >= len(student_data):
-        return jsonify({'error': 'Invalid student index'}), 400
-    
-    student = student_data[student_index]
-    
-    # Check if email is available
-    if not student.get('email'):
-        return jsonify({'error': 'No email address available for this student'}), 400
-    
-    # Generate reference number (increment by student index)
-    reference_number = f"RBU/DIA25/OL-{ref_number_start + student_index:04d}"
+    if not data_id:
+        return jsonify({'error': 'No data ID provided. Please upload a file first.'}), 400
     
     try:
+        # Get data from MongoDB
+        data_document = collection.find_one({'_id': ObjectId(data_id)})
+        
+        if not data_document:
+            return jsonify({'error': 'Data not found in database. Please upload a file again.'}), 404
+        
+        student_data = data_document.get('student_data', [])
+        offer_date = data_document.get('offer_date')
+        ref_number_start = data_document.get('ref_number_start')
+        start_date = data_document.get('start_date')
+        
+        if student_index >= len(student_data):
+            return jsonify({'error': 'Invalid student index'}), 400
+        
+        student = student_data[student_index]
+        
+        # Check if email is available
+        if not student.get('email'):
+            return jsonify({'error': 'No email address available for this student'}), 400
+        
+        # Generate reference number (increment by student index)
+        reference_number = f"RBU/DIA25/OL-{ref_number_start + student_index:04d}"
+        
         # Generate PDF for a single student
         pdf_bytes = generate_pdf(student, offer_date, reference_number, start_date)
         
@@ -198,58 +353,32 @@ def send_email_route():
         logging.error(f"Error sending email: {str(e)}")
         return jsonify({'error': f'Error sending email: {str(e)}'}), 500
 
-@app.route('/generate-all-pdfs', methods=['POST'])
-def generate_all_pdfs_route():
-    if 'student_data' not in session or 'offer_date' not in session or 'ref_number_start' not in session or 'start_date' not in session:
-        return jsonify({'error': 'No data available. Please upload a file first.'}), 400
-    
-    student_data = session['student_data']
-    offer_date = session['offer_date']
-    ref_number_start = session['ref_number_start']
-    start_date = session['start_date']
-    
-    try:
-        # Generate all PDFs
-        all_pdfs = generate_all_pdfs(student_data, offer_date, ref_number_start, start_date)
-        
-        # Create a ZIP file
-        mem_zip = BytesIO()
-        with zipfile.ZipFile(mem_zip, 'w') as zf:
-            for student, pdf_bytes in all_pdfs:
-                filename = f"offer_letter_{student['name'].replace(' ', '_')}.pdf"
-                zf.writestr(filename, pdf_bytes)
-        
-        mem_zip.seek(0)
-        
-        return send_file(
-            mem_zip,
-            mimetype='application/zip',
-            as_attachment=True,
-            download_name='offer_letters.zip'
-        )
-    
-    except Exception as e:
-        logging.error(f"Error generating PDFs: {str(e)}")
-        return jsonify({'error': f'Error generating PDFs: {str(e)}'}), 500
-
 @app.route('/send-all-emails', methods=['POST'])
 def send_all_emails_route():
-    if 'student_data' not in session or 'offer_date' not in session or 'ref_number_start' not in session or 'start_date' not in session:
-        return jsonify({'error': 'No data available. Please upload a file first.'}), 400
+    data_id = request.form.get('data_id')
     
-    student_data = session['student_data']
-    offer_date = session['offer_date']
-    ref_number_start = session['ref_number_start']
-    start_date = session['start_date']
-    
-    # Check if all students have email addresses
-    missing_emails = [student['name'] for student in student_data if not student.get('email')]
-    if missing_emails:
-        return jsonify({
-            'error': f"The following students are missing email addresses: {', '.join(missing_emails)}"
-        }), 400
+    if not data_id:
+        return jsonify({'error': 'No data ID provided. Please upload a file first.'}), 400
     
     try:
+        # Get data from MongoDB
+        data_document = collection.find_one({'_id': ObjectId(data_id)})
+        
+        if not data_document:
+            return jsonify({'error': 'Data not found in database. Please upload a file again.'}), 404
+        
+        student_data = data_document.get('student_data', [])
+        offer_date = data_document.get('offer_date')
+        ref_number_start = data_document.get('ref_number_start')
+        start_date = data_document.get('start_date')
+        
+        # Check if all students have email addresses
+        missing_emails = [student['name'] for student in student_data if not student.get('email')]
+        if missing_emails:
+            return jsonify({
+                'error': f"The following students are missing email addresses: {', '.join(missing_emails)}"
+            }), 400
+        
         # Generate all PDFs
         all_pdfs = generate_all_pdfs(student_data, offer_date, ref_number_start, start_date)
         
@@ -273,6 +402,55 @@ def send_all_emails_route():
     except Exception as e:
         logging.error(f"Error sending emails: {str(e)}")
         return jsonify({'error': f'Error sending emails: {str(e)}'}), 500
+
+@app.route('/list-uploads', methods=['GET'])
+def list_uploads():
+    """List all uploaded data sets in the MongoDB collection"""
+    try:
+        # Find all documents, sort by creation time (newest first)
+        documents = collection.find({}, {'student_data': 0}).sort('created_at', -1)
+        
+        # Convert documents to a list of dicts
+        results = []
+        for doc in documents:
+            doc['_id'] = str(doc['_id'])  # Convert ObjectId to string
+            # Get student count from the document
+            student_count = len(collection.find_one({'_id': ObjectId(doc['_id'])}, 
+                                                  {'student_data': 1, '_id': 0})
+                              .get('student_data', []))
+            doc['student_count'] = student_count
+            results.append(doc)
+        
+        return jsonify({
+            'success': True,
+            'uploads': results
+        })
+    except Exception as e:
+        logging.error(f"Error listing uploads: {str(e)}")
+        return jsonify({'error': f'Error listing uploads: {str(e)}'}), 500
+
+@app.route('/delete-upload', methods=['POST'])
+def delete_upload():
+    """Delete an uploaded data set"""
+    data_id = request.form.get('data_id')
+    
+    if not data_id:
+        return jsonify({'error': 'No data ID provided'}), 400
+    
+    try:
+        # Delete the document
+        result = collection.delete_one({'_id': ObjectId(data_id)})
+        
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Data not found in database'}), 404
+        
+        return jsonify({
+            'success': True,
+            'message': 'Data deleted successfully'
+        })
+    except Exception as e:
+        logging.error(f"Error deleting upload: {str(e)}")
+        return jsonify({'error': f'Error deleting upload: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5003, debug=True)
