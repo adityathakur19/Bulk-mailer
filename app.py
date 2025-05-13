@@ -3,11 +3,16 @@ import logging
 import tempfile
 import zipfile
 from io import BytesIO
+import pandas as pd
 from flask import Flask, render_template, request, jsonify, send_file, flash, session
 from werkzeug.utils import secure_filename
 from utils.file_processor import process_uploaded_file
 from utils.pdf_generator import generate_pdf, generate_all_pdfs
 from utils.gmail_sender import send_offer_letter_email, send_bulk_emails
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -67,30 +72,33 @@ def upload_file():
         return jsonify({'error': 'Please select a tentative start date'}), 400
     
     try:
-        # Process the uploaded file
-        if file.filename is None:
-            return jsonify({'error': 'Invalid filename'}), 400
-            
+        # save & process
         filename = secure_filename(file.filename)
         temp_path = os.path.join(tempfile.gettempdir(), filename)
         file.save(temp_path)
         
-        # Process data
+        # 1) process into a list of dicts
         student_data = process_uploaded_file(temp_path)
         
-        # Store data in session
-        session['student_data'] = student_data
-        session['offer_date'] = offer_date
-        session['ref_number_start'] = ref_number_start
-        session['start_date'] = start_date
+        # 2) clean NaN → None so jsonify emits valid JSON null
+        df = pd.DataFrame(student_data)
+        df = df.where(pd.notnull(df), None)
+        student_data = df.to_dict(orient='records')
         
-        # Clean up
+        # 3) store full, cleaned data in session
+        session['student_data']    = student_data
+        session['offer_date']      = offer_date
+        session['ref_number_start']= ref_number_start
+        session['start_date']      = start_date
+        
+        # cleanup temp file
         os.remove(temp_path)
         
+        # 4) return ALL records, not just a slice
         return jsonify({
             'success': True,
             'message': f'Successfully processed {len(student_data)} student records',
-            'preview': student_data[:5]  # Send first 5 records for preview
+            'preview': student_data       # now contains the full list
         })
     
     except Exception as e:
@@ -267,4 +275,4 @@ def send_all_emails_route():
         return jsonify({'error': f'Error sending emails: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5003, debug=True)

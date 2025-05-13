@@ -16,100 +16,185 @@ def determine_program_details(program_name):
     result = {
         'tuition_fee': 0,
         'duration': '',
-        'hostel_fee': 1000,  # Default hostel fee
+        'hostel_fee': 150,  # Default hostel fee
         'one_time_fee': 500,  # Default one-time fee
         'program_type': ''
     }
     
-    # Check for specific engineering programs that are 4 years
+    # Define program categories with comprehensive lists
     engineering_programs = [
-        'b.tech', 'btech', 'bachelor of technology', 'bachelor of engineering', 
-        'b.e', 'be', 'beng', 'mechanical engineering', 'civil engineering', 
-        'electrical engineering', 'computer engineering', 'computer science'
+        'b.tech', 'btech', 'bachelor of technology', 'bachelor of engineering',
+        'b.e', 'be', 'beng', 'mechanical engineering', 'civil engineering',
+        'electrical engineering', 'computer engineering', 'computer science',
+        'electrical and electronics engineering', 'automobile engg', 'mechtronics',
+        'aerospace engineering', 'biomedical engineering', 'electronics & computer science engineering',
+        'electronics & communication engineering', 'chemical engineering', 'cse'
     ]
     
-    # Foundation or Pathway keywords
-    foundation_keywords = ['foundation', 'pathway', 'preparatory']
-    
-    # Bachelor's degree keywords for 3-year programs
+    # Bachelor's degree programs (3-year)
     bachelor_3yr_keywords = [
-        'bachelor of arts', 'bachelor of science', 'bachelor of commerce',
-        'ba', 'bsc', 'bcom', 'b.a', 'b.sc', 'b.com', 'bba', 'b.b.a', 
-        'bachelor of business'
+        'bsc', 'b.sc', 'bachelor of science', 'bsc it', 'b.sc. (it)', 'bsc operations theatre',
+        'bca', 'bca - specialization in artificial intelligence (ai)', 
+        'bca nextgen - specialization in data science', 'bca (internet of things)',
+        'bca (data science)', 'bca (artificial intelligence)',
+        'b.sc. in airport & cargo management', 'b.sc. in home science & hospitality management',
+        'b.sc. in airlines & airport management', 'bsc radiology', 'bsc biotechnology',
+        'bsc multimédia', 'bsc mathematics', 'bsc agriculture', 'bsc environment science',
+        'bsc medical', 'bsc clinical medicine',
+        'BSc IT'
+        'bba', 'bachelor of business administration', 'bba digital marketing',
+        'bba hrm', 'bba logistics', 'bba logistisc and transport', 'bba international',
+        'business administration', 'bba finance & accounts', 'bba in logistics',
+        
+        'b.com', 'bachelor of commerce', 'b.com (hons.)', 'bcom',
+        'b.com (banking and finance)', 'b.com (finanace & accounts)',
+        'accounting and financial management',
+        
+        'llb', 'ba-llb',
+        
+        'ba', 'bachelor of arts', 'ba psychology', 'ba economics', 'ba english',
+        'ba social work', 'ba economic', 'ba social science', 'ba strategic studies',
+        'ba arts', 'ba filmmaking & tv production',
+        'b.a. (punjabi, hindi, english, sociology, psychology, political science, history)',
+        'ba arts',
+        
+        'bachelor in hotel mgmt.', 'b. vocational in personal care and wellness',
+        'b.vocational in fashion designing', 'b.vocational in interior designing',
+        'b.a. in fine arts', 'b.a hons (economics, public administration, computer)',
+        'b.p.e.s.', 'b.sc life sciences (medical)', 'b.sc physical sciences (non-medical)',
+        'b.sc in food science and technology', 'b.sc medical microbiology',
+        'b.sc medical laboratory sciences', 'bsc forensic science',
+        'bsc cardiovascular technology', 'bsc optometry',
+        'bsc medical radiology & imaging technology', 'b.sc clinical embryology',
+        'b.sc stem cell technologies & regenerative medicines',
+        'b.sc nutrigenetics and personalised nutrition', 'b.sc fashion designing',
+        'ba in mass communication and journalism', 'b.sc fashion management',
+        'bpt'
     ]
     
-    # Bachelor's degree keywords (general)
-    all_bachelor_keywords = engineering_programs + bachelor_3yr_keywords + ['bachelor', 'undergraduate']
+    pharmacy_bachelor_keywords = [
+        'b.pharma', 'b pharma', 'bachelor of pharmacy', 'b pharmacy', 'b.pharmacy', 'pharmacy'
+    ]
+    
+    pharmacy_master_keywords = [
+        'm.pharma', 'm pharma', 'master of pharmacy', 'm pharmacy'
+    ]
+    
+    # All Bachelor's degree keywords (general)
+    all_bachelor_keywords = engineering_programs + bachelor_3yr_keywords + pharmacy_bachelor_keywords + ['bachelor', 'undergraduate']
     
     # Master's degree keywords
     master_keywords = [
-        'master', 'msc', 'ma', 'meng', 'mba', 'm.tech', 'mtech', 'mca', 
-        'm.sc', 'm.a', 'm.com', 'mcom', 'ms', 'post graduate', 'pg'
+        'master', 'msc', 'ma', 'meng', 'mba', 'm.tech', 'mca',
+        'm.sc', 'm.a', 'm.com', 'mcom', 'ms', 'post graduate', 'pg',
+        'master in public health', 'masters in public health', 'hospitals administration',
+        'mba marketing',
+        'm.tech computer science & engineering', 'm.tech mechanical engineering',
+        'm.tech production engineering', 'm.tech electrical engineering',
+        'm.tech civil engineering', 'm.tech electronics and communication engineering',
+        'm.tech environmental engineering', 'm.tech (part time) computer science & engineering',
+        'm.tech (part time) mechanical engineering', 'm.tech (part time) electronics & communication engineering'
     ]
     
     # PhD keywords
-    phd_keywords = ['phd', 'doctorate', 'doctoral', 'ph.d', 'doctor of philosophy']
+    phd_keywords = [
+        'ph.d. engineering & technology', 'doctorate', 'doctoral', 'ph.d', 'doctor of philosophy'
+    ]
     
     # Diploma keywords
-    diploma_keywords = ['diploma', 'certificate', 'pgd', 'post graduate diploma']
+    diploma_keywords = [
+        'diploma', 'certificate', 'pgd', 'post graduate diploma',
+        'diploma in computer science & engineering', 'diploma in mechanical engineering',
+        'diploma in electronics & communication engineering', 'diploma in automobile engineering',
+        'diploma in electrical engineering', 'diploma in civil engineering',
+        'diploma computer science engineering'
+    ]
     
-    # BCA and MCA specific check
-    is_bca = 'bca' in program_name or 'bachelor of computer application' in program_name
-    is_mca = 'mca' in program_name or 'master of computer application' in program_name
+    # Specialized overrides (checked early!)
+    ai_ml_keywords = [
+        'btech_aiml', 'ai_ml', 'btech_ai_ml', 'btech artificial intelligence',
+        'btech machine learning', 'b.tech ai', 'b.tech ml', 'aiml', 'cyber security',
+        'b.tech aiml', 'b.tech aiml / cyber security'
+    ]
     
     # Determine program type and set details
-    has_foundation = any(keyword in program_name for keyword in foundation_keywords)
-    is_engineering = any(keyword in program_name for keyword in engineering_programs)
-    
-    # Specific program type identification with appropriate duration
-    if is_engineering or is_bca or any(program_name.startswith(kw) for kw in ['b.tech', 'btech']):
-        result['tuition_fee'] = 1600
-        result['duration'] = '04 YEARS'
-        result['program_type'] = 'Bachelor'
-    elif any(keyword in program_name for keyword in bachelor_3yr_keywords):
-        result['tuition_fee'] = 1600
-        result['duration'] = '03 YEARS'
-        result['program_type'] = 'Bachelor'
-    elif any(keyword in program_name for keyword in all_bachelor_keywords):
-        # General bachelor's (if not caught by more specific rules)
-        result['tuition_fee'] = 1600
-        result['duration'] = '03 YEARS'
-        result['program_type'] = 'Bachelor'
-    elif is_mca:
-        result['tuition_fee'] = 1800
-        result['duration'] = '02 YEARS'
-        result['program_type'] = 'Master'
-    elif any(keyword in program_name for keyword in master_keywords):
-        result['tuition_fee'] = 1800
-        result['duration'] = '02 YEARS'
-        result['program_type'] = 'Master'
-    elif any(keyword in program_name for keyword in phd_keywords):
-        result['tuition_fee'] = 2000
-        result['duration'] = '03 YEARS'
-        result['program_type'] = 'PhD'
-    elif any(keyword in program_name for keyword in diploma_keywords):
-        result['tuition_fee'] = 1200
-        result['duration'] = '01 YEAR'
-        result['program_type'] = 'Diploma'
+    if any(kw in program_name for kw in ai_ml_keywords):
+        result.update({
+            'tuition_fee': 1000,
+            'duration': '04 YEARS',
+            'program_type': 'Bachelor'
+        })
+    # Pharmacy programs
+    elif any(kw in program_name for kw in pharmacy_bachelor_keywords):
+        result.update({
+            'tuition_fee': 1000,
+            'duration': '04 YEARS',
+            'program_type': 'Bachelor'
+        })
+    elif any(kw in program_name for kw in pharmacy_master_keywords):
+        result.update({
+            'tuition_fee': 1000,
+            'duration': '02 YEARS',
+            'program_type': 'Master'
+        })
+    # Engineering or BCA programs (4-year bachelors)
+    elif any(kw in program_name for kw in engineering_programs) or 'bca' in program_name:
+        result.update({
+            'tuition_fee': 750,
+            'duration': '04 YEARS',
+            'program_type': 'Bachelor'
+        })
+    # 3-year bachelor programs
+    elif any(kw in program_name for kw in bachelor_3yr_keywords):
+        result.update({
+            'tuition_fee': 750,
+            'duration': '03 YEARS',
+            'program_type': 'Bachelor'
+        })
+    # Generic bachelor's degrees
+    elif any(kw in program_name for kw in all_bachelor_keywords):
+        result.update({
+            'tuition_fee': 750,
+            'duration': '03 YEARS',
+            'program_type': 'Bachelor'
+        })
+    # Master's programs
+    elif 'mca' in program_name or any(kw in program_name for kw in master_keywords):
+        result.update({
+            'tuition_fee': 800,
+            'duration': '02 YEARS',
+            'program_type': 'Master'
+        })
+    # PhD programs
+    elif any(kw in program_name for kw in phd_keywords):
+        result.update({
+            'tuition_fee': 1500,
+            'duration': '03 YEARS',
+            'program_type': 'PhD'
+        })
+    # Diploma programs
+    elif any(kw in program_name for kw in diploma_keywords):
+        result.update({
+            'tuition_fee': 1200,
+            'duration': '01 YEAR',
+            'program_type': 'Diploma'
+        })
+    # Default to bachelor's if nothing else matches
     else:
-        # Default to Bachelor's fee if program type is unclear
-        logging.warning(f"Could not determine program type for: {program_name}. Defaulting to Bachelor's details.")
-        result['tuition_fee'] = 1600
-        result['duration'] = '03 YEARS'
-        result['program_type'] = 'Bachelor'
+        result.update({
+            'tuition_fee': 1600,
+            'duration': '03 YEARS',
+            'program_type': 'Bachelor'
+        })
     
-    # If program has foundation, add a year to bachelor programs
-    if has_foundation and result['program_type'] == 'Bachelor':
-        # If it's already a 4-year program, keep it at 4 years
-        # For 3-year programs with foundation, make it 4 years
-        if result['duration'] == '03 YEARS':
+    # Foundation year bump
+    if 'foundation' in program_name or 'pathway' in program_name:
+        if result['program_type'] == 'Bachelor' and result['duration'] == '03 YEARS':
             result['duration'] = '04 YEARS'
     
-    # Determine scholarship (could be expanded based on criteria)
+    # Scholarship & ELP
     result['scholarship'] = "CHANCELLOR'S Scholarship"
-    
-    # English Language Program (ELP) fee
-    result['elp_fee'] = 500 if has_foundation or 'english' in program_name.lower() else 0
+    result['elp_fee'] = 500 if ('foundation' in program_name or 'english' in program_name) else 0
     
     return result
 
@@ -168,10 +253,10 @@ def process_uploaded_file(file_path):
             program_details = determine_program_details(row['program'])
             
             # Calculate fee total for first year
-            first_year_total = (program_details['one_time_fee'] + 
-                               program_details['tuition_fee'] + 
-                               program_details['elp_fee'] + 
-                               program_details['hostel_fee'])
+            first_year_total = (program_details['one_time_fee'] +
+                             program_details['tuition_fee'] +
+                             program_details['elp_fee'] +
+                             program_details['hostel_fee'])
             
             student_data = {
                 'name': row['name'],

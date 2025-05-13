@@ -42,6 +42,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Store student data
     let studentData = [];
+    const rowsPerPage = 10;
+let currentPage = 1;
+
+function renderTable() {
+    const start = (currentPage - 1) * rowsPerPage;
+    const pageItems = studentData.slice(start, start + rowsPerPage);
+    populatePreviewTable(pageItems);
+    renderPagination();
+  }
+
+
+// create pagination buttons
+function renderPagination() {
+    const pageCount = Math.ceil(studentData.length / rowsPerPage);
+    const container = document.getElementById('paginationControls');
+    container.innerHTML = '';
+  
+    for (let p = 1; p <= pageCount; p++) {
+      const li = document.createElement('li');
+      li.className = `page-item ${p === currentPage ? 'active' : ''}`;
+      const a = document.createElement('a');
+      a.className = 'page-link';
+      a.href = '#';
+      a.textContent = p;
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        currentPage = p;
+        renderTable();
+      });
+      li.appendChild(a);
+      container.appendChild(li);
+    }
+  }
 
     // Handle form submission
     uploadForm.addEventListener('submit', function(e) {
@@ -61,28 +94,16 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             loadingModal.hide();
-            
-            if (data.error) {
-                // Show error message
-                errorMessageEl.textContent = data.error;
-                errorModal.show();
-            } else {
-                // Update success message
-                successMessage.textContent = data.message;
-                
-                // Store data for later use
-                studentData = data.preview;
-                
-                // Populate the preview table
-                populatePreviewTable(data.preview);
-                
-                // Show results section
-                resultsSection.classList.remove('d-none');
-                
-                // Scroll to results
-                resultsSection.scrollIntoView({ behavior: 'smooth' });
+            if (data.error) { /* … */ }
+            else {
+              studentData = data.preview;   // now contains all records
+              currentPage = 1;              // reset to first page
+              document.getElementById('successMessage').textContent = data.message;
+              renderTable();                // initial render
+              resultsSection.classList.remove('d-none');
+              resultsSection.scrollIntoView({ behavior: 'smooth' });
             }
-        })
+          })
         .catch(error => {
             loadingModal.hide();
             errorMessageEl.textContent = 'An unexpected error occurred. Please try again.';
@@ -92,10 +113,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Function to populate the preview table
-    function populatePreviewTable(data) {
+    function populatePreviewTable(dataArray) {
         previewTableBody.innerHTML = '';
-        
-        data.forEach((student, index) => {
+        dataArray.forEach((student, index) => {
             const row = document.createElement('tr');
             
             // Name cell
@@ -135,12 +155,15 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Actions cell with both download and email buttons
             const actionsCell = document.createElement('td');
+
+            const globalIndex = (currentPage - 1) * rowsPerPage + index;
+
             
             // Download button
             const downloadBtn = document.createElement('button');
             downloadBtn.className = 'btn btn-sm btn-outline-primary me-1';
             downloadBtn.innerHTML = '<i class="fas fa-download me-1"></i> Download';
-            downloadBtn.addEventListener('click', () => generatePDF(index));
+            downloadBtn.addEventListener('click', () => generatePDF(globalIndex));
             actionsCell.appendChild(downloadBtn);
             
             // Email button (if email exists)
@@ -148,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const emailBtn = document.createElement('button');
                 emailBtn.className = 'btn btn-sm btn-outline-success';
                 emailBtn.innerHTML = '<i class="fas fa-envelope me-1"></i> Email';
-                emailBtn.addEventListener('click', () => sendEmail(index));
+                emailBtn.addEventListener('click',   () => sendEmail(globalIndex));
                 actionsCell.appendChild(emailBtn);
             }
             

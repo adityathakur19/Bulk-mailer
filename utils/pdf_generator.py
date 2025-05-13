@@ -6,10 +6,12 @@ from flask import render_template, url_for
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, mm
 from reportlab.lib.utils import ImageReader
+from reportlab.platypus import Table, TableStyle
+from reportlab.lib import colors
 
 def create_fee_table(student_data):
     """
@@ -22,65 +24,62 @@ def create_fee_table(student_data):
         Table: ReportLab Table object with fee structure
     """
     # Extract data for the table
-    tuition_fee = student_data['tuition_fee']
-    one_time_fee = student_data['one_time_fee']
-    elp_fee = student_data['elp_fee']
-    hostel_fee = student_data['hostel_fee']
+    program_fee      = 3500
+    one_time_fee     = student_data['one_time_fee']
+    elp_fee          = student_data['tuition_fee'] 
+    hostel_fee       = student_data['hostel_fee']
     first_year_total = student_data['first_year_total']
-    duration_years = int(student_data['duration'].split()[0])
+    duration_years   = int(student_data['duration'].split()[0])
     
-    # Create the data for the table header
+    # Create the data for the table header with proper spacing (multi-line headers)
     data = [
-        ['Year', 'One Time Fee', 'Tuition Fee (USD)', 'ELP', 'Hostel Fee (USD)', 'Total Fee per year (USD)']
+        ['Year',
+         'Program Fees\n(USD)/year',
+         'Program Fees After\nScholarship/Year',
+         'Learning Fees/Sem',
+         'Hostel Fees/ Month\n(Optional)']
     ]
     
     # First year with all fees
-    data.append(['1st Year', f"{one_time_fee}", f"{tuition_fee}", f"{elp_fee}", f"{hostel_fee}", f"{first_year_total}"])
+    data.append([
+        '1st Year',
+        f"{program_fee}",
+        "NIL",
+        f"{elp_fee} USD",
+        f"{hostel_fee}"
+    ])
     
-    # Always add 2nd, 3rd, and 4th year rows (if applicable)
+    # Add 2nd, 3rd, and 4th year rows (if applicable)
     year_suffixes = {2: '2nd', 3: '3rd', 4: '4th'}
     
-    # Add years 2 through 4 (or up to duration if less)
-    for year in range(2, min(5, duration_years + 1)):
+    for year in range(2, duration_years + 1):
         year_name = year_suffixes.get(year, f"{year}th")
-        data.append([f"{year_name} Year", "NIL", f"{tuition_fee}", "", "", f"{tuition_fee}"])
+        data.append([
+            f"{year_name} Year",   # Year label
+            f"{program_fee}",      # Program Fees
+            "NIL",                 # Program Fees After Scholarship
+            f"{elp_fee} USD",          # Learning Fees/Sem
+            f"{hostel_fee}"        # Hostel Fees Month (Optional)
+        ])
     
-    # Add remaining years if program is longer than 4 years
-    for year in range(5, duration_years + 1):
-        year_name = f"{year}th"
-        data.append([f"{year_name} Year", "NIL", f"{tuition_fee}", "", "", f"{tuition_fee}"])
+    program_total = first_year_total + (program_fee * (duration_years - 1))
+
+    col_widths = [80, 110, 130, 110, 100]  # Adjusted column widths for two-line headers
     
-    # Calculate total program fee
-    program_total = first_year_total + (tuition_fee * (duration_years - 1))
+    table = Table(data, colWidths=col_widths, repeatRows=1)
     
-    # Add a total row
-    data.append(["Total Fee", "", "", "", "", f"{program_total}"])
-    
-    # Create the table with appropriate column widths
-    table = Table(data, colWidths=[60, 80, 100, 40, 100, 130], repeatRows=1)
-    
-    # Define table styles for better alignment and formatting
     style = TableStyle([
-        # Header row styling
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-        
-        # All cells alignment
-        ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Left align first column (Year)
-        ('ALIGN', (1, 1), (-1, -2), 'CENTER'),  # Center align all other cells
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Vertical alignment
-        
-        # Grid lines
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        
-        # Total row styling
-        ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-        ('ALIGN', (0, -1), (0, -1), 'LEFT'),  # Left align "Total Fee" text
-        ('ALIGN', (-1, -1), (-1, -1), 'CENTER'),  # Center align total amount
-    ])
+    ('BACKGROUND',   (0, 0), (-1, 0), colors.lightgrey),
+    ('TEXTCOLOR',    (0, 0), (-1, 0), colors.black),
+    ('FONTNAME',     (0, 0), (-1, 0), 'Helvetica-Bold'),
+    ('ALIGN',        (0, 0), (-1, -1), 'CENTER'),  # Center all content
+    ('VALIGN',       (0, 0), (-1, -1), 'MIDDLE'),
+    ('TOPPADDING',   (0, 0), (-1, -1), 6),
+    ('BOTTOMPADDING',(0, 0), (-1, -1), 6),
+    ('LEFTPADDING',  (0, 0), (-1, -1), 5),
+    ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+    ('GRID',         (0, 0), (-1, -1), 1, colors.black),
+])
     
     table.setStyle(style)
     
@@ -91,12 +90,12 @@ class RBUOfferLetterTemplate(SimpleDocTemplate):
     
     def __init__(self, filename, **kwargs):
         SimpleDocTemplate.__init__(self, filename, **kwargs)
-        self.watermark_text = "NOT FOR VISA"
+        self.watermark_text = "NOT VALIDFOR VISA"
     
     def build(self, flowables, onFirstPage=None, onLaterPages=None, canvasmaker=canvas.Canvas):
         """Override build method to add watermark and logos"""
-        # Create a canvas for each page
-        self._calc()  # Calculate document layout
+        # Calculate document layout
+        self._calc()
         
         # Store the canvas and template functions
         self._onFirstPage = self._watermark_and_logos
@@ -114,39 +113,44 @@ class RBUOfferLetterTemplate(SimpleDocTemplate):
         width, height = doc.pagesize
         
         # Add watermark
-        canvas.setFont('Helvetica-Bold', 70)  # Smaller font
-        canvas.setFillColor(colors.lightgrey)  # Light grey color
-        canvas.setFillAlpha(0.2)  # Less opacity
+        canvas.setFont('Helvetica', 70)
+        canvas.setFillColor(colors.grey)
+        canvas.setFillAlpha(0.4)  
         canvas.saveState()
         canvas.translate(width/2, height/2)  # Move to center
         canvas.rotate(45)  # Rotate 45 degrees
-        canvas.drawCentredString(0, 0, self.watermark_text)  # Draw watermark
+        canvas.drawCentredString(0, 0, self.watermark_text)
         canvas.restoreState()
         
         # Add logos
         # Left logo (RBU) - positioned at top left
         left_logo_path = os.path.join(os.getcwd(), 'static/images/rbu_logo.png')
         if os.path.exists(left_logo_path):
-            # Calculate better dimensions to preserve aspect ratio
+            # No transparency for logos - full opacity
+            canvas.setFillAlpha(1.0)
             canvas.drawImage(
                 left_logo_path, 
-                15*mm,  # Left margin
+                12*mm,  # Left margin
                 height - 30*mm,  # Position at top
-                width=90*mm,  # Wider to maintain aspect ratio
-                height=20*mm,
-                preserveAspectRatio=True
+                width=90*mm,
+                height=30*mm,
+                preserveAspectRatio=True,
+                mask='auto'
             )
         
-        # Right logo (UniPortal) - positioned at top right with better spacing
+        # Right logo (UniPortal) - positioned at top right
         right_logo_path = os.path.join(os.getcwd(), 'static/images/uniportal_logo.png')
         if os.path.exists(right_logo_path):
+            # No transparency for logos - full opacity
+            canvas.setFillAlpha(1.0)
             canvas.drawImage(
                 right_logo_path, 
-                width - 75*mm,  # Position at top right
-                height - 25*mm,  # Slightly higher to align better
-                width=55*mm, 
-                height=15*mm,
-                preserveAspectRatio=True
+                width - 70*mm,
+                height - 20*mm,
+                width=50*mm, 
+                height=10*mm,
+                preserveAspectRatio=True,
+                mask='auto'
             )
         
         # Add a thin border line below the logo for separation
@@ -171,15 +175,16 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
     """
     buffer = io.BytesIO()
     
-    # Create the PDF document with custom template
+    # Create the PDF document with custom template - adjusted margins for better layout
     doc = RBUOfferLetterTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=25*mm,   # Increased for better alignment
-        leftMargin=25*mm,    # Increased for better alignment
-        topMargin=45*mm,     # Increased for logos and separation line
-        bottomMargin=25*mm   # Increased for better balance
+        rightMargin=20*mm,
+        leftMargin=20*mm,
+        topMargin=40*mm,
+        bottomMargin=20*mm
     )
+    
     
     # Define styles
     styles = getSampleStyleSheet()
@@ -194,13 +199,13 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
     )
     
     title_style = ParagraphStyle(
-        name='TitleStyle',
-        parent=styles['Heading1'],
-        fontSize=16,
-        alignment=1,  # 0=left, 1=center, 2=right
-        spaceAfter=5*mm,
-        fontName='Helvetica-Bold'
-    )
+    name='TitleStyle',
+    parent=styles['Heading1'],
+    fontSize=12,
+    alignment=1,  # 0=left, 1=center, 2=right
+    spaceAfter=5 * mm,
+    fontName='Helvetica-Bold'
+)
     
     student_info_style = ParagraphStyle(
         name='StudentInfoStyle',
@@ -239,10 +244,10 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
     content.append(Spacer(1, 5*mm))
     
     # Title
-    content.append(Paragraph("OFFER LETTER", title_style))
+    content.append(Paragraph("<u>OFFER LETTER</u>", title_style))
     content.append(Spacer(1, 5*mm))
     
-    # Student info and date table
+    # Student info and date table with improved layout
     student_info = [
         [Paragraph(f"<b>Student Name:</b> {student_data['name'].upper()}", student_info_style), 
          Paragraph(f"<b>Date of offer:</b> {offer_date}", student_info_style)],
@@ -250,7 +255,8 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
          Paragraph("", student_info_style)]
     ]
     
-    student_table = Table(student_info, colWidths=[300, 200])
+    # Better width distribution for student info
+    student_table = Table(student_info, colWidths=[doc.width * 0.6, doc.width * 0.4])
     student_table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 10)
@@ -273,7 +279,7 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
     content.append(Paragraph(main_content, normal_style))
     content.append(Spacer(1, 5*mm))
     
-    # Program details table
+    # Program details table with improved columns
     program_details = [
         ["Program Name", student_data['program'].upper()],
         ["Program Duration", student_data['duration']],
@@ -283,7 +289,8 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
         ["Scholarship Awarded", student_data['scholarship']]
     ]
     
-    program_table = Table(program_details, colWidths=[150, 350])
+    # Better width distribution (30% - 70%)
+    program_table = Table(program_details, colWidths=[doc.width * 0.3, doc.width * 0.7])
     program_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
@@ -299,15 +306,15 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
     content.append(Paragraph("Fee Structure after scholarship:", bold_style))
     content.append(Spacer(1, 3*mm))
     
-    # Fee structure table
+    # Fee structure table - using the improved function
     fee_table, program_total = create_fee_table(student_data)
     content.append(fee_table)
     content.append(Spacer(1, 2*mm))
     
     # Fee notes
     fee_notes = """
-    *Hostel with Mess service @1500 USD per year. One time fees is not part of the tuition & hostel fees.
-    FRO CHARGES ONE TIME – 50 USD; Exam Fees Per Sem = 50 USD; HEALTH INSURANCE–150 USD/YEAR
+    *one time Admissions – 500 USD: Hostel with Mess service @1500 USD per year. One time fees is not part of the tuition & hostel fees. FRO CHARGES ONE TIME – 50 USD; Exam Fees Per Sem = 50 USD; HEALTH INSURANCE–150 USD/YEAR
+
     """
     content.append(Paragraph(fee_notes, normal_style))
     content.append(Spacer(1, 5*mm))
@@ -318,7 +325,9 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
     Failing which the admission shall be cancelled and no refund shall be entertained.
     """
     content.append(Paragraph(provisional_note, normal_style))
-    content.append(Spacer(1, 10*mm))
+    
+    # Add page break to ensure conditions start on a new page
+    content.append(PageBreak())
     
     # Conditions header
     content.append(Paragraph("CONDITIONS TO ACCEPT THIS ADMISSION OFFER LETTER", header_style))
@@ -364,23 +373,25 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
     
     content.append(Spacer(1, 3*mm))
     
-    # Bank details table
+    # Bank details table with better width distribution and handling long address
     bank_details = [
         ["BANK NAME", "PUNJAB NATIONAL BANK"],
-        ["BANK ADDRESS", "VILL- SAHAURAN, RAYAT BAHRA INSTITUTE, DISST-SAS NAGAR, PUNJAB- 140104"],
+        ["BANK ADDRESS", "VILL- SAHAURAN, RAYAT BAHRA INSTITUTE,\nDISST-SAS NAGAR, PUNJAB- 140104"],
         ["ACCOUNT NAME", "INTERNATIONAL ADMISSION RAYAT BAHRA GROUP OF INSTITUTES"],
         ["ACCOUNT NUMBER", "19341132000031"],
         ["SWIFT CODE", "PUNBINBBISB"],
         ["IFSC / MICR CODE", "PUNB0193410 / 160024145"]
     ]
     
-    bank_table = Table(bank_details, colWidths=[150, 350])
+    # Better width distribution (28% - 72%) with adequate space for content
+    bank_table = Table(bank_details, colWidths=[doc.width * 0.28, doc.width * 0.72])
     bank_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('PADDING', (0, 0), (-1, -1), 6)
+        ('PADDING', (0, 0), (-1, -1), 6),
+        ('WORDWRAP', (0, 0), (-1, -1), True)  # Enable word wrapping for all cells
     ]))
     
     content.append(bank_table)
@@ -389,6 +400,8 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
     # Important instructions header
     content.append(Paragraph("IMPORTANT INSTRUCTIONS FOR THE STUDENTS:", header_style))
     content.append(Spacer(1, 3*mm))
+    
+    
     
     # Instructions list
     instructions = [
@@ -401,7 +414,7 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
         "Your admission will be confirmed on verification of original certificates of qualifying examination, failing which will lead to cancellation of admission and you will not be eligible for any refund in such case.",
         "The university reserves the rights to discontinue/Cancel/change the program offered at any point of time."
     ]
-    
+
     for instruction in instructions:
         bullet_text = f"• {instruction}"
         content.append(Paragraph(bullet_text, normal_style))
@@ -409,6 +422,14 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
     
     content.append(Spacer(1, 2*mm))
     content.append(Paragraph("Please sign this Document and send us the scanned copy as a proof of acceptance on do@bahrauniversity.edu.in. or Whatsapp on +9184769-12345", normal_style))
+    content.append(Spacer(1, 5*mm))
+
+    # Add signature image before building the PDF
+    signature_path = os.path.join(os.getcwd(), 'static/images/sign.png')
+    if os.path.exists(signature_path):
+        signature_img = Image(signature_path, width=60*mm, height=40*mm)
+    signature_img.hAlign = 'LEFT'   
+    content.append(signature_img)
     
     # Build the PDF document
     doc.build(content)
@@ -418,6 +439,7 @@ def generate_pdf(student_data, offer_date, reference_number, start_date):
     buffer.close()
     
     return pdf_data
+
 
 def generate_all_pdfs(student_data_list, offer_date, ref_number_start, start_date):
     """
@@ -449,5 +471,6 @@ def generate_all_pdfs(student_data_list, offer_date, ref_number_start, start_dat
         except Exception as e:
             logging.error(f"Error generating PDF for {student_data['name']}: {str(e)}")
             # Continue processing other students even if one fails
+    
     
     return results
