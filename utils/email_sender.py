@@ -8,7 +8,7 @@ from sendgrid.helpers.mail import (
     HtmlContent,Bcc
 )
 
-bcc_email = "testing.ocena@gmail.com"
+bcc_email = "suhail.lucknow@gmail.com"
 
 def send_offer_letter_email(to_email, student_name, pdf_bytes, reference_number):
     """
