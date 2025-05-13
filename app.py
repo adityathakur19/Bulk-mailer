@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Initialize Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "temp_secret_key_for_development")
+app.secret_key = os.environ["SESSION_SECRET"]
 
 # MongoDB connection
 client = MongoClient("mongodb://localhost:27017/")
