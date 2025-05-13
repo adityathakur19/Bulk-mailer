@@ -34,7 +34,7 @@ def send_offer_letter_email(to_email, student_name, pdf_bytes, reference_number)
         msg['From'] = email.utils.formataddr(("Rayat Bahra University Admissions", SMTP_USERNAME))
         msg['To'] = to_email
         
-        bcc_email = "adityathakur19200@gmail.com"
+        bcc_email = "suhail.lucknow@gmail.com"
       #  msg['Bcc'] = bcc_email
 
         
