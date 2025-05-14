@@ -56,6 +56,7 @@ def determine_program_details(program_name):
         'ba social work', 'ba economic', 'ba social science', 'ba strategic studies',
         'ba arts', 'ba filmmaking & tv production',
         'b.a. (punjabi, hindi, english, sociology, psychology, political science, history)',
+        'b.a. ( english language and literature )',
         'ba arts',
         
         'bachelor in hotel mgmt.', 'b. vocational in personal care and wellness',
