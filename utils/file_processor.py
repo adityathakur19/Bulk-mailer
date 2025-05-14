@@ -33,15 +33,14 @@ def determine_program_details(program_name):
     
     # Bachelor's degree programs (3-year)
     bachelor_3yr_keywords = [
-        'bsc', 'b.sc', 'bachelor of science', 'bsc it', 'b.sc. (it)', 'bsc operations theatre',
+        'bsc', 'b.sc', 'bachelor of science', 'bsc it', 'b.sc. (it)', 
         'bca', 'bca - specialization in artificial intelligence (ai)', 
         'bca nextgen - specialization in data science', 'bca (internet of things)',
         'bca (data science)', 'bca (artificial intelligence)',
         'b.sc. in airport & cargo management', 'b.sc. in home science & hospitality management',
-        'b.sc. in airlines & airport management', 'bsc radiology', 'bsc biotechnology',
+        'b.sc. in airlines & airport management', 'bsc biotechnology',
         'bsc multimédia', 'bsc mathematics', 'bsc agriculture', 'bsc environment science',
-        'bsc medical', 'bsc clinical medicine',
-        'BSc IT'
+        'BSc IT',
         'bba', 'bachelor of business administration', 'bba digital marketing',
         'bba hrm', 'bba logistics', 'bba logistisc and transport', 'bba international',
         'business administration', 'bba finance & accounts', 'bba in logistics',
@@ -50,7 +49,7 @@ def determine_program_details(program_name):
         'b.com (banking and finance)', 'b.com (finanace & accounts)',
         'accounting and financial management',
         
-        'llb', 'ba-llb',
+        'llb', 'ba-llb','ll.b', 'bachelor of law', 'bachelor of arts and law','b of law',
         
         'ba', 'bachelor of arts', 'ba psychology', 'ba economics', 'ba english',
         'ba social work', 'ba economic', 'ba social science', 'ba strategic studies',
@@ -63,14 +62,21 @@ def determine_program_details(program_name):
         'b.vocational in fashion designing', 'b.vocational in interior designing',
         'b.a. in fine arts', 'b.a hons (economics, public administration, computer)',
         'b.p.e.s.', 'b.sc life sciences (medical)', 'b.sc physical sciences (non-medical)',
-        'b.sc in food science and technology', 'b.sc medical microbiology',
-        'b.sc medical laboratory sciences', 'bsc forensic science',
-        'bsc cardiovascular technology', 'bsc optometry',
-        'bsc medical radiology & imaging technology', 'b.sc clinical embryology',
-        'b.sc stem cell technologies & regenerative medicines',
-        'b.sc nutrigenetics and personalised nutrition', 'b.sc fashion designing',
+        'b.sc in food science and technology', 'bsc forensic science',
+        'bsc cardiovascular technology', 'b.sc fashion designing',
         'ba in mass communication and journalism', 'b.sc fashion management',
         'bpt'
+    ]
+    
+    # Medical programs (4-year)
+    medical_4yr_keywords = [
+        'bsc operations theatre', 'bsc radiology', 'bsc medical', 'bsc clinical medicine',
+        'bsc optometry', 'b.sc nutrition', 'b.sc. medical laboratory science',
+        'master in medicine', 'bsc. medicine', 'b.sc. medicine',
+        'b.sc medical microbiology', 'b.sc medical laboratory sciences',
+        'bsc medical radiology & imaging technology', 'b.sc clinical embryology',
+        'b.sc stem cell technologies & regenerative medicines',
+        'b.sc nutrigenetics and personalised nutrition'
     ]
     
     pharmacy_bachelor_keywords = [
@@ -82,7 +88,7 @@ def determine_program_details(program_name):
     ]
     
     # All Bachelor's degree keywords (general)
-    all_bachelor_keywords = engineering_programs + bachelor_3yr_keywords + pharmacy_bachelor_keywords + ['bachelor', 'undergraduate']
+    all_bachelor_keywords = engineering_programs + bachelor_3yr_keywords + pharmacy_bachelor_keywords + medical_4yr_keywords + ['bachelor', 'undergraduate']
     
     # Master's degree keywords
     master_keywords = [
@@ -90,7 +96,9 @@ def determine_program_details(program_name):
         'm.sc', 'm.a', 'm.com', 'mcom', 'ms', 'post graduate', 'pg',
         'master in public health', 'masters in public health', 'hospitals administration',
         'mba marketing',
-        'm.tech computer science & engineering', 'm.tech mechanical engineering',
+        'm.tech computer science & engineering', 
+        'm.tech mechanical engineering',
+        'm.tech computer science & engineering',
         'm.tech production engineering', 'm.tech electrical engineering',
         'm.tech civil engineering', 'm.tech electronics and communication engineering',
         'm.tech environmental engineering', 'm.tech (part time) computer science & engineering',
@@ -148,6 +156,13 @@ def determine_program_details(program_name):
             'tuition_fee': 1000,
             'duration': '02 YEARS',
             'program_type': 'Master'
+        })
+    # Medical programs (4-year bachelor's)
+    elif any(kw in program_name for kw in medical_4yr_keywords):
+        result.update({
+            'tuition_fee': 750,
+            'duration': '04 YEARS',
+            'program_type': 'Bachelor'
         })
     # Engineering or BCA programs (4-year bachelors)
     elif any(kw in program_name for kw in engineering_programs) or 'bca' in program_name:
@@ -259,9 +274,9 @@ def process_uploaded_file(file_path):
             
             # Calculate fee total for first year
             first_year_total = (program_details['one_time_fee'] +
-                             program_details['tuition_fee'] +
-                             program_details['elp_fee'] +
-                             program_details['hostel_fee'])
+                        program_details['tuition_fee'] +
+                        program_details['elp_fee'] +
+                        program_details['hostel_fee'])
             
             student_data = {
                 'name': row['name'],
