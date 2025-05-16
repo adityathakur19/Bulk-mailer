@@ -76,7 +76,9 @@ def determine_program_details(program_name):
         'b.sc medical microbiology', 'b.sc medical laboratory sciences',
         'bsc medical radiology & imaging technology', 'b.sc clinical embryology',
         'b.sc stem cell technologies & regenerative medicines',
-        'b.sc nutrigenetics and personalised nutrition'
+        'b.sc nutrigenetics and personalised nutrition',
+        'b.sc nursing',
+        'bsc nursing'
     ]
     
     pharmacy_bachelor_keywords = [
