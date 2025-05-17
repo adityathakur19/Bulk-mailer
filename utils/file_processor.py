@@ -49,7 +49,7 @@ def determine_program_details(program_name):
         'b.com (banking and finance)', 'b.com (finanace & accounts)',
         'accounting and financial management',
         
-        'llb', 'ba-llb','ll.b', 'bachelor of law', 'bachelor of arts and law','b of law',
+        'llb', 'll.b', 'bachelor of law', 'b of law',
         
         'ba', 'bachelor of arts', 'ba psychology', 'ba economics', 'ba english',
         'ba social work', 'ba economic', 'ba social science', 'ba strategic studies',
@@ -68,6 +68,13 @@ def determine_program_details(program_name):
         'bpt'
     ]
     
+    # 5-year law programs
+    five_year_law_keywords = [
+        'ba-llb', 'bachelor of arts and law', 'ba llb', 
+        'bcom-llb', 'bcom llb', 'b.com llb', 'b.com-llb',
+        'bba-llb', 'bba llb', 'b.b.a llb', 'b.b.a-llb'
+    ]
+    
     # Medical programs (4-year)
     medical_4yr_keywords = [
         'bsc operations theatre', 'bsc radiology', 'bsc medical', 'bsc clinical medicine',
@@ -76,9 +83,13 @@ def determine_program_details(program_name):
         'b.sc medical microbiology', 'b.sc medical laboratory sciences',
         'bsc medical radiology & imaging technology', 'b.sc clinical embryology',
         'b.sc stem cell technologies & regenerative medicines',
-        'b.sc nutrigenetics and personalised nutrition',
-        'b.sc nursing',
-        'bsc nursing'
+        'b.sc nutrigenetics and personalised nutrition'
+    ]
+    
+    # BSc Nursing programs (specific handling for this program)
+    nursing_keywords = [
+        'b.sc nursing', 'bsc nursing', 'bachelor of science in nursing', 
+        'bachelor of nursing', 'nursing'
     ]
     
     pharmacy_bachelor_keywords = [
@@ -128,7 +139,29 @@ def determine_program_details(program_name):
         'b.tech aiml', 'b.tech aiml / cyber security'
     ]
     
-    if any(kw in program_name for kw in ai_ml_keywords):
+    # Check for PhD programs first - will be flagged with special status
+    if any(kw in program_name for kw in phd_keywords):
+        result.update({
+            'tuition_fee': 1500,
+            'duration': '03 YEARS',
+            'program_type': 'PhD',
+            'no_offer_letter': True  # Flag to prevent offer letter generation
+        })
+    # Check for BSc Nursing with updated fees
+    elif any(kw in program_name for kw in nursing_keywords):
+        result.update({
+            'tuition_fee': 1250,  # Updated fee for BSc Nursing
+            'duration': '04 YEARS',
+            'program_type': 'Bachelor'
+        })
+    # Check for 5-year law programs
+    elif any(kw in program_name for kw in five_year_law_keywords):
+        result.update({
+            'tuition_fee': 750,
+            'duration': '05 YEARS',  # Updated duration for law programs
+            'program_type': 'Bachelor'
+        })
+    elif any(kw in program_name for kw in ai_ml_keywords):
         result.update({
             'tuition_fee': 1000,
             'duration': '04 YEARS',
@@ -194,13 +227,6 @@ def determine_program_details(program_name):
             'duration': '02 YEARS',
             'program_type': 'Master'
         })
-    # PhD programs
-    elif any(kw in program_name for kw in phd_keywords):
-        result.update({
-            'tuition_fee': 1500,
-            'duration': '03 YEARS',
-            'program_type': 'PhD'
-        })
     # Default to bachelor's if nothing else matches
     else:
         result.update({
@@ -217,6 +243,10 @@ def determine_program_details(program_name):
     # Scholarship & ELP
     result['scholarship'] = "CHANCELLOR'S Scholarship"
     result['elp_fee'] = 500 if ('foundation' in program_name or 'english' in program_name) else 0
+    
+    # Set no_offer_letter to False by default if not already set
+    if 'no_offer_letter' not in result:
+        result['no_offer_letter'] = False
     
     return result
 
@@ -273,6 +303,11 @@ def process_uploaded_file(file_path):
         for _, row in df.iterrows():
             # Get program details
             program_details = determine_program_details(row['program'])
+            
+            # Skip PhD students - no offer letter should be issued
+            if program_details.get('no_offer_letter', False):
+                logging.warning(f"Skipping offer letter generation for PhD student: {row['name']}")
+                continue
             
             # Calculate fee total for first year
             first_year_total = (program_details['one_time_fee'] +
